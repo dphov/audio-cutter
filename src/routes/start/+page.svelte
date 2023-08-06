@@ -1,20 +1,28 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import WaveSurfer from 'wavesurfer.js';
 	import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.js';
+	import MinimapPlugin from 'wavesurfer.js/dist/plugins/minimap';
 
 	let loop = true;
 	let minPxPerSec = 10;
 	let ws: WaveSurfer;
 	let wsRegions: RegionsPlugin;
-	let onlyOneRegion: Region;
+	let regionBegin = 0;
+	let regionEnd = 0;
 	const createWaveSurfer = (url: string) => {
 		// Create an instance of WaveSurfer
 		ws = WaveSurfer.create({
 			container: '#waveform',
 			waveColor: 'rgb(200, 0, 200)',
 			progressColor: 'rgb(100, 0, 100)',
-			url
+			url,
+			plugins: [
+				MinimapPlugin.create({
+					height: 20,
+					waveColor: '#ddd',
+					progressColor: '#999'
+				})
+			]
 		});
 		console.log(ws);
 		// Initialize the Regions plugin
@@ -24,15 +32,21 @@
 		const random = (min, max) => Math.random() * (max - min) + min;
 		const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`;
 
+		//		ws.on('decode', () => {
+		//		});
 		wsRegions.on('region-created', (region) => {
 			wsRegions.getRegions().forEach((r) => {
 				if (r.id !== region.id) {
 					r.remove();
 				}
 			});
+			regionBegin = region.start;
+			regionEnd = region.end;
 		});
 		wsRegions.on('region-updated', (region) => {
 			console.log('Updated region', region);
+			regionBegin = region.start;
+			regionEnd = region.end;
 		});
 
 		wsRegions.enableDragSelection({
@@ -74,9 +88,14 @@
 	// 	minPxPerSec = Number(e.target.value);
 	// 	ws.zoom(minPxPerSec);
 	// }
+
 	let files: FileList;
 	$: files && createWaveSurfer(URL.createObjectURL(files[0]));
 	$: wsRegions && console.log(wsRegions);
+
+	function cutAudio(start: number, end: number) {
+		console.log('cutAudio');
+	}
 </script>
 
 <svelte:head>
@@ -93,6 +112,9 @@
 		<p>
 			{files[0].name}
 		</p>
+		<input type="number" bind:value={regionBegin} />
+		<input type="number" bind:value={regionEnd} />
+		<button on:click={() => cutAudio(regionBegin, regionEnd)}>Cut</button>
 	{/if}
 	<input bind:files type="file" accept="audio/*" class="" />
 
