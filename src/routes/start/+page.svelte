@@ -1,4 +1,12 @@
 <script lang="ts">
+	import { Command } from '@tauri-apps/api/shell';
+	// alternatively, use `window.__TAURI__.shell.Command`
+	// `binaries/my-sidecar` is the EXACT value specified on `tauri.conf.json > tauri > bundle > externalBin`
+	import { open } from '@tauri-apps/api/dialog';
+	import { downloadDir } from '@tauri-apps/api/path';
+	import { readBinaryFile } from '@tauri-apps/api/fs';
+	// When using the Tauri API npm package:
+	import { invoke } from '@tauri-apps/api/tauri';
 	import WaveSurfer from 'wavesurfer.js';
 	import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.js';
 	import MinimapPlugin from 'wavesurfer.js/dist/plugins/minimap';
@@ -9,13 +17,16 @@
 	let wsRegions: RegionsPlugin;
 	let regionBegin = 0;
 	let regionEnd = 0;
-	const createWaveSurfer = (url: string) => {
-		// Create an instance of WaveSurfer
+	let url;
+	let binaryFile;
+	async function createWaveSurfer(url: string) {
+		/* read data into a Uint8Array */
+		binaryFile = await readBinaryFile(url);
+
 		ws = WaveSurfer.create({
 			container: '#waveform',
 			waveColor: 'rgb(200, 0, 200)',
 			progressColor: 'rgb(100, 0, 100)',
-			url,
 			plugins: [
 				MinimapPlugin.create({
 					height: 20,
@@ -24,11 +35,10 @@
 				})
 			]
 		});
-		console.log(ws);
-		// Initialize the Regions plugin
+		await ws.loadBlob(new Blob([binaryFile.buffer]));
+
 		wsRegions = ws.registerPlugin(RegionsPlugin.create());
 
-		// Give regions a random color when they are created
 		const random = (min, max) => Math.random() * (max - min) + min;
 		const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`;
 
@@ -82,19 +92,42 @@
 		ws.once('decode', () => {
 			ws.zoom(minPxPerSec);
 		});
-	};
+	}
 	// // Update the zoom level on slider change
 	// function updateZoom(e: Event) {
 	// 	minPxPerSec = Number(e.target.value);
 	// 	ws.zoom(minPxPerSec);
 	// }
 
-	let files: FileList;
-	$: files && createWaveSurfer(URL.createObjectURL(files[0]));
-	$: wsRegions && console.log(wsRegions);
+	let showControls = false;
+	async function cutAudio(start: number, end: number, url: string) {
+		const outputUrl = `${url}.cuthardcode-${Date.now()}.mp3`;
+		const args = ['-i', `${url}`, '-ss', `${start}`, '-to', `${end}`, '-c', 'copy', outputUrl];
+		console.log('args', args);
+		const ffmpeg = Command.sidecar('binaries/ffmpeg', args);
+		const output = await ffmpeg.execute();
+		console.log(output);
+		if (output.code !== 0) {
+			console.log(output.stderr);
+		}
+		console.log('was written to path', outputUrl);
+	}
 
-	function cutAudio(start: number, end: number) {
-		console.log('cutAudio');
+	async function loadAudio() {
+		url = await open({
+			multiple: false,
+			filters: [{ name: 'Audio', extensions: ['mp3'] }],
+			directory: false,
+			defaultPath: await downloadDir()
+		});
+
+		if (url === null) {
+			//user canceled
+			return;
+		}
+		await createWaveSurfer(url as string);
+		console.log('selectedAudioFileUrl', url);
+		showControls = true;
 	}
 </script>
 
@@ -106,18 +139,15 @@
 <section>
 	<h1 class="title">Choose audio file</h1>
 	<div id="waveform" />
-	{#if files && files[0]}
+	{#if showControls}
 		<button on:click={() => ws.playPause()}>Start/Pause</button>
 		<label>Loop <input type="checkbox" bind:checked={loop} /></label>
-		<p>
-			{files[0].name}
-		</p>
 		<input type="number" bind:value={regionBegin} />
 		<input type="number" bind:value={regionEnd} />
-		<button on:click={() => cutAudio(regionBegin, regionEnd)}>Cut</button>
+		<button on:click={() => cutAudio(regionBegin, regionEnd, url)}>Cut</button>
 	{/if}
-	<input bind:files type="file" accept="audio/*" class="" />
-
+	<!--<input bind:files type="file" accept="audio/*" class="" /> -->
+	<button on:click={() => loadAudio()}> Load audio </button>
 	<div class="">
 		<a href="/" role="button" class="">Go to menu</a>
 	</div>
