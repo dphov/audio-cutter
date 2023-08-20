@@ -1,16 +1,13 @@
 <script lang="ts">
 	import { Command } from '@tauri-apps/api/shell';
-	// alternatively, use `window.__TAURI__.shell.Command`
-	// `binaries/my-sidecar` is the EXACT value specified on `tauri.conf.json > tauri > bundle > externalBin`
 	import { open } from '@tauri-apps/api/dialog';
 	import { downloadDir } from '@tauri-apps/api/path';
 	import { readBinaryFile } from '@tauri-apps/api/fs';
-	// When using the Tauri API npm package:
-	import { invoke } from '@tauri-apps/api/tauri';
 	import WaveSurfer from 'wavesurfer.js';
 	import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.js';
 	import MinimapPlugin from 'wavesurfer.js/dist/plugins/minimap';
-
+	import { fade } from 'svelte/transition';
+	import { info, debug, error } from 'tauri-plugin-log-api';
 	let loop = true;
 	let minPxPerSec = 10;
 	let ws: WaveSurfer;
@@ -22,7 +19,11 @@
 	async function createWaveSurfer(url: string) {
 		/* read data into a Uint8Array */
 		binaryFile = await readBinaryFile(url);
-
+		if (ws !== undefined) {
+			ws.destroy();
+			regionBegin = 0;
+			regionEnd = 0;
+		}
 		ws = WaveSurfer.create({
 			container: '#waveform',
 			waveColor: 'rgb(200, 0, 200)',
@@ -101,22 +102,34 @@
 
 	let showControls = false;
 	async function cutAudio(start: number, end: number, url: string) {
-		const outputUrl = `${url}.cuthardcode-${Date.now()}.mp3`;
+		if (start > end || start === end) {
+			debug(`cannot cut not valid interval start: ${start} end: ${end}`);
+			return;
+		}
+
+		const urlSplitted = url.split('.');
+		const extension = urlSplitted.pop();
+		const outputUrl = `${urlSplitted.join('.')}.${Date.now()}-cut.${extension}`;
 		const args = ['-i', `${url}`, '-ss', `${start}`, '-to', `${end}`, '-c', 'copy', outputUrl];
-		console.log('args', args);
+		debug(`ffmpeg args: ${args}`);
+
 		const ffmpeg = Command.sidecar('binaries/ffmpeg', args);
 		const output = await ffmpeg.execute();
-		console.log(output);
+
+		debug(`ffmpeg output info : ${output}`);
+
 		if (output.code !== 0) {
-			console.log(output.stderr);
+			error(`ffmpeg error: ${output.stderr}`);
 		}
-		console.log('was written to path', outputUrl);
+
+		info(`was written to path ${outputUrl}`);
 	}
 
 	async function loadAudio() {
+		const extensions = ['flac', 'wav', 'mp3', 'aac'];
 		url = await open({
 			multiple: false,
-			filters: [{ name: 'Audio', extensions: ['mp3'] }],
+			filters: [{ name: 'Audio', extensions }],
 			directory: false,
 			defaultPath: await downloadDir()
 		});
@@ -138,7 +151,7 @@
 
 <section>
 	<h1 class="title">Choose audio file</h1>
-	<div id="waveform" />
+	<div id="waveform" transition:fade />
 	{#if showControls}
 		<button on:click={() => ws.playPause()}>Start/Pause</button>
 		<label>Loop <input type="checkbox" bind:checked={loop} /></label>
@@ -146,7 +159,6 @@
 		<input type="number" bind:value={regionEnd} />
 		<button on:click={() => cutAudio(regionBegin, regionEnd, url)}>Cut</button>
 	{/if}
-	<!--<input bind:files type="file" accept="audio/*" class="" /> -->
 	<button on:click={() => loadAudio()}> Load audio </button>
 	<div class="">
 		<a href="/" role="button" class="">Go to menu</a>
