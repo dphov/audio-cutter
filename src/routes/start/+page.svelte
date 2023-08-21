@@ -5,17 +5,24 @@
 	import { readBinaryFile } from '@tauri-apps/api/fs';
 	import WaveSurfer from 'wavesurfer.js';
 	import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.js';
+	import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline';
 	import MinimapPlugin from 'wavesurfer.js/dist/plugins/minimap';
 	import { fade } from 'svelte/transition';
-	import { info, debug, error } from 'tauri-plugin-log-api';
+	import CutIcon from '$lib/images/cut.svg';
+	import RegionLoopIcon from '$lib/images/loop-region.svg';
+	import PlayIcon from '$lib/images/play.svg';
+	import PauseIcon from '$lib/images/pause.svg';
+
 	let loop = true;
-	let minPxPerSec = 10;
+	let minPxPerSec = 100;
 	let ws: WaveSurfer;
 	let wsRegions: RegionsPlugin;
 	let regionBegin = 0;
 	let regionEnd = 0;
 	let url;
+	let filename;
 	let binaryFile;
+
 	async function createWaveSurfer(url: string) {
 		/* read data into a Uint8Array */
 		binaryFile = await readBinaryFile(url);
@@ -24,18 +31,112 @@
 			regionBegin = 0;
 			regionEnd = 0;
 		}
+		const bottomTimeline = TimelinePlugin.create({
+			height: 28,
+			timeInterval: 1,
+			primaryLabelInterval: 1,
+			style: {
+				fontSize: '12px',
+				color: '#6A3274'
+			}
+		});
 		ws = WaveSurfer.create({
 			container: '#waveform',
 			waveColor: 'rgb(200, 0, 200)',
 			progressColor: 'rgb(100, 0, 100)',
-			plugins: [
-				MinimapPlugin.create({
-					height: 20,
-					waveColor: '#ddd',
-					progressColor: '#999'
-				})
-			]
+			plugins: [bottomTimeline],
+			minPxPerSec
 		});
+		ws.on('load', (url) => {
+			console.log('Load', url);
+		});
+		ws.on('loading', (percent) => {
+			console.log('Loading', percent + '%');
+		});
+		/** When audio starts loading */
+		ws.on('load', (url) => {
+			console.log('Load', url);
+		});
+
+		/** During audio loading */
+		ws.on('loading', (percent) => {
+			console.log('Loading', percent + '%');
+		});
+
+		/** When the audio has been decoded */
+		ws.on('decode', (duration) => {
+			console.log('Decode', duration + 's');
+		});
+
+		/** When the audio is both decoded and can play */
+		ws.on('ready', (duration) => {
+			console.log('Ready', duration + 's');
+		});
+
+		/** When a waveform is drawn */
+		ws.on('redraw', () => {
+			console.log('Redraw');
+		});
+
+		/** When the audio starts playing */
+		ws.on('play', () => {
+			console.log('Play');
+		});
+
+		/** When the audio pauses */
+		ws.on('pause', () => {
+			console.log('Pause');
+		});
+
+		/** When the audio finishes playing */
+		ws.on('finish', () => {
+			console.log('Finish');
+		});
+
+		/** On audio position change, fires continuously during playback */
+		ws.on('timeupdate', (currentTime) => {
+			console.log('Time', currentTime + 's');
+		});
+
+		/** When the user seeks to a new position */
+		ws.on('seeking', (currentTime) => {
+			console.log('Seeking', currentTime + 's');
+		});
+
+		/** When the user interacts with the waveform (i.g. clicks or drags on it) */
+		ws.on('interaction', (newTime) => {
+			activeRegion = null;
+
+			console.log('Interaction', newTime + 's');
+		});
+
+		/** When the user clicks on the waveform */
+		ws.on('click', (relativeX) => {
+			console.log('Click', relativeX);
+		});
+
+		/** When the user drags the cursor */
+		ws.on('drag', (relativeX) => {
+			console.log('Drag', relativeX);
+		});
+
+		/** When the waveform is scrolled (panned) */
+		ws.on('scroll', (visibleStartTime, visibleEndTime) => {
+			console.log('Scroll', visibleStartTime + 's', visibleEndTime + 's');
+		});
+
+		/** When the zoom level changes */
+		ws.on('zoom', (minPxPerSec) => {
+			ws.zoom(minPxPerSec);
+
+			console.log('Zoom', minPxPerSec + 'px/s');
+		});
+
+		/** Just before the waveform is destroyed so you can clean up your events */
+		ws.on('destroy', () => {
+			console.log('Destroy');
+		});
+
 		await ws.loadBlob(new Blob([binaryFile.buffer]));
 
 		wsRegions = ws.registerPlugin(RegionsPlugin.create());
@@ -83,48 +184,62 @@
 			e.stopPropagation();
 			activeRegion = region;
 			region.play();
+			isAudioPlaying();
 			region.setOptions({ color: randomColor() });
-		});
-
-		ws.on('interaction', () => {
-			activeRegion = null;
-		});
-
-		ws.once('decode', () => {
-			ws.zoom(minPxPerSec);
 		});
 	}
 	// // Update the zoom level on slider change
-	// function updateZoom(e: Event) {
-	// 	minPxPerSec = Number(e.target.value);
-	// 	ws.zoom(minPxPerSec);
-	// }
+	function updateZoom(e: Event) {
+		e.stopPropagation();
+		console.log('updateZoom', e.deltaY * -0.01);
+		minPxPerSec += e.deltaY * -0.01;
+		minPxPerSec = Math.min(500, Math.max(minPxPerSec, 10));
+		console.log(minPxPerSec);
+		ws.zoom(minPxPerSec);
+	}
 
-	let showControls = false;
+	$: isAudioPlaying = () => {
+		if (ws == null) {
+			return false;
+		} else {
+			return !ws.getMediaElement().paused || false;
+		}
+	};
+	$: audioLoaded = false;
+
+	function playPauseUI() {
+		if (ws.getMediaElement().paused) {
+			ws.play();
+			isAudioPlaying();
+		} else {
+			ws.pause();
+			isAudioPlaying();
+		}
+	}
+
 	async function cutAudio(start: number, end: number, url: string) {
 		if (start > end || start === end) {
-			debug(`cannot cut not valid interval start: ${start} end: ${end}`);
+			//		debug(`cannot cut not valid interval start: ${start} end: ${end}`);
 			return;
 		}
-
+		console.log('url', url);
 		const urlSplitted = url.split('.');
 		const extension = urlSplitted.pop();
 		const outputUrl = `${urlSplitted.join('.')}.${Date.now()}-cut.${extension}`;
 		const args = ['-i', `${url}`, '-ss', `${start}`, '-to', `${end}`, '-c', 'copy', outputUrl];
-		debug(`ffmpeg args: ${args}`);
+		//	debug(`ffmpeg args: ${args}`);
 
 		const ffmpeg = Command.sidecar('binaries/ffmpeg', args);
 		const output = await ffmpeg.execute();
 
-		debug(`ffmpeg output info : ${output}`);
+		console.log(`ffmpeg output info : ${JSON.stringify(output)}`);
 
 		if (output.code !== 0) {
-			error(`ffmpeg error: ${output.stderr}`);
+			//		error(`ffmpeg error: ${output.stderr}`);
 		}
 
-		info(`was written to path ${outputUrl}`);
+		//	info(`was written to path ${outputUrl}`);
 	}
-
 	async function loadAudio() {
 		const extensions = ['flac', 'wav', 'mp3', 'aac'];
 		url = await open({
@@ -133,14 +248,14 @@
 			directory: false,
 			defaultPath: await downloadDir()
 		});
-
 		if (url === null) {
 			//user canceled
 			return;
 		}
+		filename = url.split('/').pop();
 		await createWaveSurfer(url as string);
 		console.log('selectedAudioFileUrl', url);
-		showControls = true;
+		audioLoaded = true;
 	}
 </script>
 
@@ -149,24 +264,62 @@
 	<meta name="description" content="start page" />
 </svelte:head>
 
-<section>
-	<h1 class="title">Choose audio file</h1>
-	<div id="waveform" transition:fade />
-	{#if showControls}
-		<button on:click={() => ws.playPause()}>Start/Pause</button>
-		<label>Loop <input type="checkbox" bind:checked={loop} /></label>
-		<input type="number" bind:value={regionBegin} />
-		<input type="number" bind:value={regionEnd} />
-		<button on:click={() => cutAudio(regionBegin, regionEnd, url)}>Cut</button>
+<section class="wrapper centered">
+	{#if audioLoaded && ws !== undefined}
+		<div>{filename}</div>
 	{/if}
-	<button on:click={() => loadAudio()}> Load audio </button>
-	<div class="">
-		<a href="/" role="button" class="">Go to menu</a>
+	<div class="waveform" id="waveform" once:mousewheel={updateZoom} />
+	{#if audioLoaded && ws !== undefined}
+		<div id="media-controls">
+			{#if isAudioPlaying()}
+				<button on:click={() => playPauseUI()} title="Pause" class="media-button">
+					<PauseIcon width={44} height={44} />
+				</button>
+			{:else}
+				<button on:click={() => playPauseUI()} title="Play" class="media-button">
+					<PlayIcon width={44} height={44} />
+				</button>
+			{/if}
+			<label>Loop <input type="checkbox" bind:checked={loop} /><RegionLoopIcon /></label>
+			<!-- <input type="number" bind:value={regionBegin} /> -->
+			<!-- <input type="number" bind:value={regionEnd} /> -->
+			<button on:click={() => cutAudio(regionBegin, regionEnd, url)}><CutIcon /> </button>
+		</div>
+	{/if}
+	<div id="footer-controls">
+		<button class="menu-button" on:click={() => loadAudio()}>Load audio </button>
+		<div class="">
+			<a href="/" role="button" class="">Go to menu</a>
+		</div>
 	</div>
 </section>
 
 <style>
-	.title {
-		border: 1px solid;
+	button {
+		display: inline-block;
+		border: none;
+		transition: background 250ms ease-in-out, transform 150ms ease;
+	}
+	.wrapper {
+		margin-left: auto;
+		margin-right: auto;
+	}
+	.centered {
+		/* position: fixed; */
+		/* top: 50%; */
+		/* left: 50%; */
+		/* transform: translate(-50%, -50%); */
+	}
+	.waveform {
+		min-width: 1000px;
+		width: 100%;
+	}
+
+	#media-controls {
+		text-align: center;
+	}
+
+	#footer-controls {
+		text-align: center;
 	}
 </style>
