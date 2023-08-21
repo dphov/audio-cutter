@@ -268,7 +268,7 @@
 	{#if audioLoaded && ws !== undefined}
 		<div>{filename}</div>
 	{/if}
-	<div class="waveform" id="waveform" once:mousewheel={updateZoom} />
+	<div class="waveform" id="waveform" on:mousewheel={updateZoom} />
 	{#if audioLoaded && ws !== undefined}
 		<div id="media-controls">
 			{#if isAudioPlaying()}
