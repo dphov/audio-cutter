@@ -12,6 +12,7 @@ body {
 }
 
 button {
+	max-height: 5vh;
 	cursor: pointer;
 }
 
@@ -37,10 +38,16 @@ button {
 .min-h-100vh {
 	min-height: 100vh;
 }
+.self-center {
+	align-self: center;
+}
 
 .self-left {
 	align-self: flex-start; /* Align this item to the left */
 }
 .hidden {
 	visibility: hidden;
+}
+.margin-05rem {
+	margin: 0.5rem;
 }

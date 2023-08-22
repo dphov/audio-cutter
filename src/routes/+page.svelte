@@ -10,7 +10,7 @@
 	import RegionLoopIcon from '$lib/images/loop-region.svg';
 	import PlayIcon from '$lib/images/play.svg';
 	import PauseIcon from '$lib/images/pause.svg';
-
+	import Hover from 'wavesurfer.js/dist/plugins/hover';
 	let loop = true;
 	let minPxPerSec = 100;
 	let ws: WaveSurfer;
@@ -40,11 +40,18 @@
 				color: '#6A3274'
 			}
 		});
+		const hover = Hover.create({
+			lineColor: '#ff0000',
+			lineWidth: 2,
+			labelBackground: '#555',
+			labelColor: '#fff',
+			labelSize: '11px'
+		});
 		ws = WaveSurfer.create({
 			container: '#waveform',
 			waveColor: 'rgb(200, 0, 200)',
 			progressColor: 'rgb(100, 0, 100)',
-			plugins: [bottomTimeline],
+			plugins: [bottomTimeline, hover],
 			minPxPerSec
 		});
 		ws.on('load', (url) => {
@@ -137,15 +144,16 @@
 			console.log('Destroy');
 		});
 
-		await ws.loadBlob(new Blob([binaryFile.buffer]));
+		ws.on('seeking', (so) => {
+			console.log('Seeking', so);
+		});
 
+		await ws.loadBlob(new Blob([binaryFile.buffer]));
 		wsRegions = ws.registerPlugin(RegionsPlugin.create());
 
 		const random = (min: number, max: number) => Math.random() * (max - min) + min;
 		const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`;
 
-		//		ws.on('decode', () => {
-		//		});
 		wsRegions.on('region-created', (region) => {
 			wsRegions.getRegions().forEach((r) => {
 				if (r.id !== region.id) {
@@ -253,11 +261,16 @@
 		if (url === null) {
 			//user canceled
 			url = oldUrl;
-			audioLoaded = true;
+			if (oldUrl == null) {
+				audioLoaded = null;
+			} else {
+				audioLoaded = true;
+			}
 			return;
 		}
 		filename = url.split('/').pop() as string;
 		await createWaveSurfer(url as string);
+		//ws.zoom(100);
 		console.log('selectedAudioFileUrl', url);
 		audioLoaded = true;
 	}
@@ -270,22 +283,27 @@
 
 <section class="min-h-100vh flex-column flex justify-center">
 	{#if audioLoaded === true}
-		<div class="self-left">{filename}</div>
+		<div class="self-left title-margin">{filename}</div>
 	{:else if audioLoaded === false}
-		<div>Loading audio...</div>
+		<div class="self-center">Loading audio...</div>
 	{/if}
 	<div class={audioLoaded ? '' : 'hidden'} id="waveform" />
 	{#if audioLoaded}
-		<div class="flex justify-center">
-			{#if isAudioPlaying()}
-				<button on:click={() => playPauseUI()} title="Pause">
-					<PauseIcon width={44} height={44} />
+		<div class="margin-05rem flex-column flex items-center justify-center">
+			<div>
+				{#if isAudioPlaying()}
+					<button on:click={() => playPauseUI()} title="Pause">
+						<PauseIcon width={44} height={44} />
+					</button>
+				{:else}
+					<button on:click={() => playPauseUI()} title="Play">
+						<PlayIcon width={44} height={44} />
+					</button>
+				{/if}
+				<button title="Cut" on:click={() => cutAudio(regionBegin, regionEnd, url)}
+					><CutIcon />
 				</button>
-			{:else}
-				<button on:click={() => playPauseUI()} title="Play">
-					<PlayIcon width={44} height={44} />
-				</button>
-			{/if}
+			</div>
 			<label
 				>Loop play on region <input
 					title="Loop play on region"
@@ -296,27 +314,42 @@
 			</label>
 			<!-- <input type="number" bind:value={regionBegin} /> -->
 			<!-- <input type="number" bind:value={regionEnd} /> -->
-			<button title="Cut" on:click={() => cutAudio(regionBegin, regionEnd, url)}
-				><CutIcon />
-			</button>
 		</div>
 	{/if}
 	<!-- {#if audioLoaded === null} -->
-	<div class="flex justify-center">
-		<button on:click={() => loadAudio()}>
-			{#if audioLoaded === null}
-				Load audio file
-			{:else}
-				Change audio file
-			{/if}
-		</button>
-	</div>
 	<!-- {/if} -->
-	<footer class="flex justify-center">
-		<div>Audio cutter v.0.0.1</div>
-		<div>Supported extensions: mp3</div>
+	<footer class="footer-margin flex-column flex items-center justify-center">
+		<div class="">
+			<button title="Select audio file" on:click={() => loadAudio()}>
+				{#if audioLoaded === null}
+					Load audio file
+				{:else}
+					Change audio file
+				{/if}
+			</button>
+		</div>
+		<div id="bottom-info">
+			<span class="bottom-info-item">Audio cutter v.0.0.1</span>
+			<span class="bottom-info-item">Supported extensions: mp3</span>
+		</div>
 	</footer>
 </section>
 
 <style>
+	.title-margin {
+		margin: 0.5rem;
+	}
+	.footer-margin {
+		margin-top: 0.5rem;
+		margin-bottom: 0.3rem;
+	}
+	#bottom-info {
+		margin-top: 3rem;
+		margin-left: 1rem;
+		margin-right: 1rem;
+		margin-bottom: 2rem;
+	}
+	.bottom-info-item {
+		margin: 0.3rem;
+	}
 </style>
