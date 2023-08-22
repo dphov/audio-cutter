@@ -11,10 +11,6 @@
 	onDestroy(unsubscribe);
 </script>
 
-<div class="app" data-theme={themeName}>
-	<main>
-		<slot />
-	</main>
-
-	<footer />
-</div>
+<main data-theme={themeName}>
+	<slot />
+</main>

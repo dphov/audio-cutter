@@ -1,0 +1,46 @@
+@import 'normalize.css';
+@import '@fontsource/inria-sans';
+
+html {
+	tab-size: 4;
+	font-family: 'Inria Sans', sans-serif;
+	font-size: 1em;
+}
+
+body {
+	margin: 0;
+}
+
+button {
+	cursor: pointer;
+}
+
+.flex {
+	display: flex;
+}
+.flex-column {
+	flex-direction: column;
+}
+
+.justify-center {
+	justify-content: center;
+}
+
+.justify-between {
+	justify-content: space-between;
+}
+
+.items-center {
+	align-items: center;
+}
+
+.min-h-100vh {
+	min-height: 100vh;
+}
+
+.self-left {
+	align-self: flex-start; /* Align this item to the left */
+}
+.hidden {
+	visibility: hidden;
+}

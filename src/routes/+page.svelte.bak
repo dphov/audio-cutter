@@ -1,0 +1,38 @@
+<script>
+	import { goto } from '$app/navigation';
+	import { exit } from '@tauri-apps/api/process';
+	const routes = ['start'];
+
+	const supportedExtensions = ['mp3'];
+
+	import { listen } from '@tauri-apps/api/event';
+
+	listen('tauri://file-drop', (event) => {
+		console.log(event);
+		goto('/start');
+	});
+</script>
+
+<svelte:head>
+	<title>Home</title>
+	<meta name="description" content="home page" />
+</svelte:head>
+
+<section class="flex-column min-h-100vh flex items-center justify-center">
+	<div>Audio cutter v.0.0.1</div>
+	<div>Supported extensions: {supportedExtensions}</div>
+	<div>
+		{#each routes as route}
+			<a href="/{route}" role="button" title={route}>{route}</a>
+		{/each}
+		<button
+			title="Exit"
+			on:click={() => {
+				exit(0);
+			}}>Exit</button
+		>
+	</div>
+</section>
+
+<style>
+</style>
