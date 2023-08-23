@@ -11,6 +11,17 @@
 	onDestroy(unsubscribe);
 </script>
 
-<main data-theme={themeName}>
+<main data-theme={themeName} class="app-background">
 	<slot />
 </main>
+
+<style>
+	:global(button) {
+		background: none;
+		border: none;
+	}
+	:global(div),
+	:global(button) {
+		color: var(--text);
+	}
+</style>

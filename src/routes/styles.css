@@ -1,12 +1,26 @@
 @import 'normalize.css';
 @import '@fontsource/inria-sans';
+:root {
+	--text: #eee;
+	--background: #3a3a3a;
+	--primary: #ffa538;
+	--secondary: #ffa1ac;
+	--accent: #612db3;
 
+	--played-section: #ffa538;
+	--unplayed-section: #cc84ad;
+	--hover-on-wave-bar: #612db3;
+
+	--selected-region: rgba(255, 255, 255, 0.1);
+
+	--media-button-background: rgba(122, 122, 122, 1);
+	--media-button-background-hover: rgba(111, 111, 111, 1);
+}
 html {
 	tab-size: 4;
 	font-family: 'Inria Sans', sans-serif;
 	font-size: 1em;
 }
-
 body {
 	margin: 0;
 }
@@ -14,8 +28,38 @@ body {
 button {
 	max-height: 5vh;
 	cursor: pointer;
+	text-transform: none;
 }
-
+label,
+input[type='checkbox'],
+input[type='submit'],
+input[type='button'] {
+	cursor: pointer;
+}
+.controls-button {
+	padding: 0.1rem;
+	min-width: 6vw;
+	min-height: 4vh;
+	background-color: var(--media-button-background);
+	transition: transform 0.1s cubic-bezier(0.36, 0.57, 0.34, 0.75), background-color 0.2s ease-out;
+}
+.regular-button {
+	padding: 0.2rem;
+	font-size: 14px;
+	border-radius: 4px;
+	min-width: 3vw;
+	min-height: 2vh;
+	background-color: var(--media-button-background);
+	transition: transform 0.1s cubic-bezier(0.36, 0.57, 0.34, 0.75), background-color 0.2s ease-out;
+}
+.controls-button:active,
+.regular-button:active {
+	transform: scale(0.98); /* Scale the button up by 10% when clicked */
+}
+.controls-button:hover,
+.regular-button:hover {
+	background-color: var(--media-button-background-hover);
+}
 .flex {
 	display: flex;
 }
@@ -50,4 +94,8 @@ button {
 }
 .margin-05rem {
 	margin: 0.5rem;
+}
+
+.app-background {
+	background-color: var(--background);
 }
