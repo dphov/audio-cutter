@@ -1,4 +1,5 @@
 import { readonly, writable } from 'svelte/store';
+import type { WaveSurferOptions } from 'wavesurfer.js';
 
 const themeStoreInitValue = localStorage.getItem('themeStore') || 'light';
 export const themeStore = writable(themeStoreInitValue);
@@ -18,3 +19,6 @@ export const regionStoreInitValue: { start: number | null; end: number | null } 
     end: null
 };
 export const regionStore = writable(regionStoreInitValue);
+
+//export const waveSurferOptionsInitValue: WaveSurferOptions = new waveSurferOptions();
+//export const waveSurferOptions = writable();

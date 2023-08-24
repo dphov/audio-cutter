@@ -18,14 +18,14 @@
 		regionStore,
 		regionStoreInitValue
 	} from './stores';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import { get } from 'svelte/store';
+
 	let loop = true;
-	let minPxPerSec = 100;
+	let minPxPerSecBindValue = 100;
 	let ws: WaveSurfer;
 	let wsRegions: RegionsPlugin;
-	let regionBegin = 0;
-	let regionEnd = 0;
+
 	let url: string | null;
 	let binaryAudio;
 
@@ -58,8 +58,11 @@
 
 		if (ws !== undefined) {
 			ws.destroy();
-			regionBegin = 0;
-			regionEnd = 0;
+			regionStore.update((value) => {
+				value.start = 0;
+				value.end = 0;
+				return value;
+			});
 		}
 
 		const bottomTimeline = TimelinePlugin.create({
@@ -79,38 +82,16 @@
 			labelSize: '11px'
 		});
 
-		let audioNode;
-		// await new Promise((resolve) => {
-		// 	const reader = new FileReader();
-		// 	reader.onload = (e: ProgressEvent) => {
-		// 		appProcessStatusWritableStore.set('Processing file...');
-		//
-		// 		const arrayBuffer = (e.target as FileReader).result as ArrayBuffer;
-		// 		const srcUrl = URL.createObjectURL(new Blob([arrayBuffer]));
-		// 		audioNode = new Audio(srcUrl);
-		// 	};
-		// 	reader.readAsArrayBuffer(new Blob([binaryAudio.buffer]));
-		// 	reader.onloadend = (e) => {
-		// 		ws = WaveSurfer.create({
-		// 			container: '#waveform',
-		// 			waveColor: cUnplayedSection,
-		// 			progressColor: cPlayedSection,
-		// 			plugins: [bottomTimeline, hover],
-		// 			minPxPerSec,
-		// 			media: audioNode
-		// 		});
-		// 		appProcessStatusWritableStore.set('Audio file is ready.');
-		//
-		// 		resolve(reader.result);
-		// 	};
-		// });
 		ws = WaveSurfer.create({
 			container: '#waveform',
 			waveColor: cUnplayedSection,
 			progressColor: cPlayedSection,
-			plugins: [bottomTimeline, hover]
+			plugins: [bottomTimeline, hover],
+			minPxPerSec: minPxPerSecBindValue
 		});
+
 		setTimeout(() => appProcessStatusWritableStore.set('😉'), 2000);
+		await ws.loadBlob(new Blob([binaryAudio.buffer]));
 
 		ws.on('load', (url) => {
 			console.log('Load', url);
@@ -128,6 +109,9 @@
 			console.log('Loading', percent + '%');
 		});
 
+		ws.once('decode', () => {
+			console.log(ws);
+		});
 		/** When the audio has been decoded */
 		ws.on('decode', (duration) => {
 			console.log('Decode', duration + 's');
@@ -180,10 +164,8 @@
 		});
 
 		/** When the zoom level changes */
-		ws.on('zoom', (minPxPerSec) => {
-			ws.zoom(minPxPerSec);
-
-			console.log('Zoom', minPxPerSec + 'px/s');
+		ws.on('zoom', (minPxPerSecBindValue) => {
+			console.log('Zoom', minPxPerSecBindValue + 'px/s');
 		});
 
 		/** Just before the waveform is destroyed so you can clean up your events */
@@ -195,7 +177,6 @@
 			console.log('Seeking', so);
 		});
 
-		await ws.loadBlob(new Blob([binaryAudio.buffer]));
 		wsRegions = ws.registerPlugin(RegionsPlugin.create());
 
 		wsRegions.on('region-created', (region) => {
@@ -244,14 +225,6 @@
 			region.play();
 			isAudioPlaying();
 		});
-	}
-
-	function updateZoom(e: WheelEvent) {
-		e.stopPropagation();
-		console.log('updateZoom', e.deltaY * -0.01);
-		minPxPerSec += e.deltaY * -0.01;
-		minPxPerSec = Math.min(500, Math.max(minPxPerSec, 10));
-		ws.zoom(minPxPerSec);
 	}
 
 	$: isAudioPlaying = () => {
@@ -336,6 +309,7 @@
 			return;
 		}
 		filename = url.split('/').pop() as string;
+
 		lastCuttedFileStore.set('');
 		appProcessStatusWritableStore.set('Loading...');
 
@@ -345,7 +319,19 @@
 
 	const unsubscribe = appProcessStatusReadableStore.subscribe((value) => {
 		console.log('storeupdate', value);
-	}); // logs '0'
+	});
+
+	const updateZoom = (e: Event) => {
+		e.stopPropagation();
+		const newZoom = e.target.valueAsNumber;
+		ws.zoom(newZoom);
+	};
+	const updateVolume = (e: Event) => {
+		e.stopPropagation();
+		const newVolume = e.target.valueAsNumber;
+		ws.setVolume(newVolume);
+	};
+
 	onDestroy(unsubscribe);
 </script>
 
@@ -355,15 +341,15 @@
 </svelte:head>
 
 <section class="min-h-100vh flex-column flex justify-center">
-	{#if audioLoaded === true}
-		<div class="flex">
-			<div class="self-left">
-				{filename}
-			</div>
-			<br />
-		</div>
-	{/if}
 	<div id="waveform-container">
+		{#if audioLoaded === true}
+			<div class="flex">
+				<div class="self-left">
+					{filename}
+				</div>
+				<br />
+			</div>
+		{/if}
 		<div class={audioLoaded ? '' : 'hidden'} id="waveform" />
 	</div>
 	{#if audioLoaded}
@@ -396,6 +382,28 @@
 						<CutIcon width={50} height={44} />
 					</div>
 				</button>
+				<div id="scroll-elements-container">
+					<label style="margin-left: 2em">
+						Zoom: <input
+							id="zoom-input"
+							on:input={(e) => updateZoom(e)}
+							type="range"
+							min="10"
+							max="1000"
+							bind:value={minPxPerSecBindValue}
+						/>
+					</label>
+					<label style="margin-left: 2em">
+						Volume: <input
+							id="volume-input"
+							on:input={(e) => updateVolume(e)}
+							type="range"
+							min="0"
+							max="100"
+							value="100"
+						/>
+					</label>
+				</div>
 			</div>
 			<div>
 				<button class="regular-button" on:click={() => focusOnRegion()}>Focus on region</button>
@@ -413,7 +421,7 @@
 			</div>
 		</div>
 	{/if}
-	{#if $appProcessStatusReadableStore === 'Reading file...'}{:else}
+	{#if $appProcessStatusReadableStore !== 'Reading file...'}
 		<div class="flex items-center justify-center">
 			<button class="regular-button" title="Select audio file" on:click={() => loadAudio()}>
 				{#if audioLoaded === null}
@@ -424,8 +432,6 @@
 			</button>
 		</div>
 	{/if}
-	<!-- {#if audioLoaded === null} -->
-	<!-- {/if} -->
 	<footer class="footer-margin flex-column flex items-center justify-center">
 		<div id="bottom-info">
 			{#if $lastCuttedFileStore.length > 0}
