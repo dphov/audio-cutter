@@ -16,13 +16,16 @@
 		appProcessStatusWritableStore,
 		lastCuttedFileStore,
 		regionStore,
-		regionStoreInitValue
+		regionStoreInitValue,
+		volumeStore,
+		playerStore
 	} from './stores';
 	import { onDestroy, tick } from 'svelte';
 	import { get } from 'svelte/store';
 
 	let loop = true;
 	let minPxPerSecBindValue = 100;
+	let volumeBindValue = 1;
 	let ws: WaveSurfer;
 	let wsRegions: RegionsPlugin;
 
@@ -89,6 +92,7 @@
 			plugins: [bottomTimeline, hover],
 			minPxPerSec: minPxPerSecBindValue
 		});
+		ws.getMediaElement().preload = 'auto';
 
 		setTimeout(() => appProcessStatusWritableStore.set('😉'), 2000);
 		await ws.loadBlob(new Blob([binaryAudio.buffer]));
@@ -130,18 +134,23 @@
 		/** When the audio starts playing */
 		ws.on('play', () => {
 			appProcessStatusWritableStore.set('Playing.');
+
+			playerStore.update((store) => ({ ...store, play: true }));
 			console.log('Play');
 		});
 
 		/** When the audio pauses */
 		ws.on('pause', () => {
 			appProcessStatusWritableStore.set('Paused.');
+
+			playerStore.update((store) => ({ ...store, play: false }));
 			console.log('Pause');
 		});
 
 		ws.on('finish', () => {
 			console.log('Finish');
 
+			playerStore.update((store) => ({ ...store, play: false }));
 			appProcessStatusWritableStore.set('Stopped.');
 		});
 		let timePrev;
@@ -223,26 +232,18 @@
 			e.stopPropagation();
 			activeRegion = region;
 			region.play();
-			isAudioPlaying();
 		});
 	}
 
-	$: isAudioPlaying = () => {
-		if (ws == null) {
-			return false;
-		} else {
-			return !ws.getMediaElement().paused || false;
-		}
-	};
 	$: audioLoaded = null;
 
 	function playPauseUI() {
-		if (ws.getMediaElement().paused) {
+		if (!ws.isPlaying()) {
+			playerStore.update((store) => ({ ...store, play: true }));
 			ws.play();
-			isAudioPlaying();
 		} else {
+			playerStore.update((store) => ({ ...store, play: false }));
 			ws.pause();
-			isAudioPlaying();
 		}
 	}
 
@@ -329,7 +330,17 @@
 	const updateVolume = (e: Event) => {
 		e.stopPropagation();
 		const newVolume = e.target.valueAsNumber;
-		ws.setVolume(newVolume);
+		volumeStore.update((value) => ({ ...value, volume: newVolume }));
+		ws.setVolume(get(volumeStore).volume);
+	};
+	const muteUnmute = (e: Event) => {
+		e.stopPropagation();
+		if (ws.getMuted()) {
+			volumeStore.update((value) => ({ ...value, muted: false }));
+		} else {
+			volumeStore.update((value) => ({ ...value, muted: true }));
+		}
+		ws.setMuted(get(volumeStore).muted);
 	};
 
 	onDestroy(unsubscribe);
@@ -343,7 +354,7 @@
 <section class="min-h-100vh flex-column flex justify-center">
 	<div id="waveform-container">
 		{#if audioLoaded === true}
-			<div class="flex">
+			<div id="filename-text" class="flex">
 				<div class="self-left">
 					{filename}
 				</div>
@@ -355,52 +366,61 @@
 	{#if audioLoaded}
 		<div class="margin-05rem flex-column flex items-center justify-center">
 			<div>
-				{#if isAudioPlaying()}
+				<div id="media-buttons-container" class="flex justify-center">
+					{#if $playerStore.play}
+						<button
+							on:click={() => playPauseUI()}
+							title="Pause"
+							class="rounded-corners controls-button"
+							><div class="svg-white-mono">
+								<PauseIcon width={44} height={44} />
+							</div>
+						</button>
+					{:else}
+						<button
+							on:click={() => playPauseUI()}
+							title="Play"
+							class="rounded-corners controls-button"
+							><div class="svg-white-mono">
+								<PlayIcon width={44} height={44} />
+							</div>
+						</button>
+					{/if}
 					<button
-						on:click={() => playPauseUI()}
-						title="Pause"
 						class="rounded-corners controls-button"
+						title="Cut"
+						on:click={() => cutAudio(get(regionStore).start, get(regionStore).end, url)}
 						><div class="svg-white-mono">
-							<PauseIcon width={44} height={44} />
+							<CutIcon width={50} height={44} />
 						</div>
 					</button>
-				{:else}
-					<button
-						on:click={() => playPauseUI()}
-						title="Play"
-						class="rounded-corners controls-button"
-						><div class="svg-white-mono">
-							<PlayIcon width={44} height={44} />
-						</div>
-					</button>
-				{/if}
-				<button
-					class="rounded-corners controls-button"
-					title="Cut"
-					on:click={() => cutAudio(get(regionStore).start, get(regionStore).end, url)}
-					><div class="svg-white-mono">
-						<CutIcon width={50} height={44} />
-					</div>
-				</button>
-				<div id="scroll-elements-container">
-					<label style="margin-left: 2em">
+				</div>
+				<div id="scroll-elements-container" class="flex justify-center">
+					<label>
 						Zoom: <input
 							id="zoom-input"
 							on:input={(e) => updateZoom(e)}
 							type="range"
-							min="10"
-							max="1000"
+							min="100"
+							max="2000"
 							bind:value={minPxPerSecBindValue}
 						/>
 					</label>
+
+					{#if !$volumeStore.muted}
+						<button class="regular-button" on:click={(e) => muteUnmute(e)}>Mute</button>
+					{:else}
+						<button class="regular-button" on:click={(e) => muteUnmute(e)}>Unmute</button>
+					{/if}
 					<label style="margin-left: 2em">
 						Volume: <input
 							id="volume-input"
 							on:input={(e) => updateVolume(e)}
 							type="range"
 							min="0"
-							max="100"
-							value="100"
+							max="1"
+							step="0.1"
+							bind:value={volumeBindValue}
 						/>
 					</label>
 				</div>
@@ -436,8 +456,9 @@
 		<div id="bottom-info">
 			{#if $lastCuttedFileStore.length > 0}
 				<a class="bottom-info-item" on:click={() => writeText($lastCuttedFileStore)}>
-					Cut saved here: {$lastCuttedFileStore}
-				</a>
+					(Click to copy in clipboard)<br /></a
+				>
+				<a class="bottom-info-item">Cut saved here: {$lastCuttedFileStore}</a>
 			{/if}
 			<div class="bottom-info-item" id="status-line">Status: {$appProcessStatusReadableStore}</div>
 			<span class="bottom-info-item">Audio cutter v.0.0.1</span>
@@ -448,7 +469,15 @@
 
 <style>
 	#waveform-container {
-		margin: 1rem;
+	}
+	#filename-text {
+		margin: 0.1rem 1rem;
+	}
+	#waveform {
+		margin: 0.1rem 1rem;
+		background-color: #333;
+		border: 1px solid;
+		border-color: black;
 	}
 	.rounded-corners {
 		border-radius: 6px;

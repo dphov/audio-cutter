@@ -38,6 +38,7 @@ input[type='button'] {
 }
 .controls-button {
 	padding: 0.1rem;
+	margin: 0 0.2rem;
 	min-width: 6vw;
 	min-height: 4vh;
 	background-color: var(--media-button-background);

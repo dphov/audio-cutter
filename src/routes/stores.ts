@@ -20,5 +20,10 @@ export const regionStoreInitValue: { start: number | null; end: number | null } 
 };
 export const regionStore = writable(regionStoreInitValue);
 
+export const volumeStoreInitValue = { volume: 1, muted: false };
+export const volumeStore = writable(volumeStoreInitValue);
+
+export const playerStoreInitValue = { play: false };
+export const playerStore = writable(playerStoreInitValue);
 //export const waveSurferOptionsInitValue: WaveSurferOptions = new waveSurferOptions();
 //export const waveSurferOptions = writable();
