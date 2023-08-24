@@ -134,7 +134,6 @@
 		/** When the audio starts playing */
 		ws.on('play', () => {
 			appProcessStatusWritableStore.set('Playing.');
-
 			playerStore.update((store) => ({ ...store, play: true }));
 			console.log('Play');
 		});
@@ -142,14 +141,12 @@
 		/** When the audio pauses */
 		ws.on('pause', () => {
 			appProcessStatusWritableStore.set('Paused.');
-
 			playerStore.update((store) => ({ ...store, play: false }));
 			console.log('Pause');
 		});
 
 		ws.on('finish', () => {
 			console.log('Finish');
-
 			playerStore.update((store) => ({ ...store, play: false }));
 			appProcessStatusWritableStore.set('Stopped.');
 		});
@@ -240,10 +237,12 @@
 	function playPauseUI() {
 		if (!ws.isPlaying()) {
 			playerStore.update((store) => ({ ...store, play: true }));
-			ws.play();
+			ws.playPause();
+			tick();
 		} else {
 			playerStore.update((store) => ({ ...store, play: false }));
-			ws.pause();
+			ws.playPause();
+			tick();
 		}
 	}
 
@@ -280,7 +279,6 @@
 	}
 	function focusOnRegion() {
 		if (ws.getCurrentTime() === get(regionStore).start) return;
-
 		ws.setTime(get(regionStore).start as number);
 	}
 	async function removeRegion() {
@@ -396,7 +394,7 @@
 					</button>
 				</div>
 				<div id="scroll-elements-container" class="flex justify-center">
-					<label>
+					<label style="margin: 0 0.3rem">
 						Zoom: <input
 							id="zoom-input"
 							on:input={(e) => updateZoom(e)}
@@ -406,23 +404,26 @@
 							bind:value={minPxPerSecBindValue}
 						/>
 					</label>
-
-					{#if !$volumeStore.muted}
-						<button class="regular-button" on:click={(e) => muteUnmute(e)}>Mute</button>
-					{:else}
-						<button class="regular-button" on:click={(e) => muteUnmute(e)}>Unmute</button>
-					{/if}
-					<label style="margin-left: 2em">
-						Volume: <input
-							id="volume-input"
-							on:input={(e) => updateVolume(e)}
-							type="range"
-							min="0"
-							max="1"
-							step="0.1"
-							bind:value={volumeBindValue}
-						/>
-					</label>
+					<div>
+						<button class="regular-button" on:click={(e) => muteUnmute(e)}>
+							{#if !$volumeStore.muted}
+								Mute
+							{:else}
+								Unmute
+							{/if}
+						</button>
+						<label style="margin: 0 0.3rem">
+							Volume: <input
+								id="volume-input"
+								on:input={(e) => updateVolume(e)}
+								type="range"
+								min="0"
+								max="1"
+								step="0.1"
+								bind:value={volumeBindValue}
+							/>
+						</label>
+					</div>
 				</div>
 			</div>
 			<div>
@@ -478,6 +479,9 @@
 		background-color: #333;
 		border: 1px solid;
 		border-color: black;
+	}
+	#scroll-elements-container {
+		padding: 0.4rem;
 	}
 	.rounded-corners {
 		border-radius: 6px;

@@ -30,12 +30,14 @@ button {
 	cursor: pointer;
 	text-transform: none;
 }
+
 label,
 input[type='checkbox'],
 input[type='submit'],
 input[type='button'] {
 	cursor: pointer;
 }
+
 .controls-button {
 	padding: 0.1rem;
 	margin: 0 0.2rem;
@@ -44,6 +46,7 @@ input[type='button'] {
 	background-color: var(--media-button-background);
 	transition: transform 0.1s cubic-bezier(0.36, 0.57, 0.34, 0.75), background-color 0.2s ease-out;
 }
+
 .regular-button {
 	padding: 0.2rem;
 	font-size: 14px;
@@ -53,10 +56,12 @@ input[type='button'] {
 	background-color: var(--media-button-background);
 	transition: transform 0.1s cubic-bezier(0.36, 0.57, 0.34, 0.75), background-color 0.2s ease-out;
 }
+
 .controls-button:active,
 .regular-button:active {
 	transform: scale(0.98); /* Scale the button up by 10% when clicked */
 }
+
 .controls-button:hover,
 .regular-button:hover {
 	background-color: var(--media-button-background-hover);
