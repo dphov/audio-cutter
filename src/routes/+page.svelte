@@ -14,9 +14,12 @@
 	import {
 		appProcessStatusReadableStore,
 		appProcessStatusWritableStore,
-		lastCuttedFileStore
+		lastCuttedFileStore,
+		regionStore,
+		regionStoreInitValue
 	} from './stores';
 	import { onDestroy } from 'svelte';
+	import { get } from 'svelte/store';
 	let loop = true;
 	let minPxPerSec = 100;
 	let ws: WaveSurfer;
@@ -77,29 +80,35 @@
 		});
 
 		let audioNode;
-		await new Promise((resolve) => {
-			const reader = new FileReader();
-			reader.onload = (e: ProgressEvent) => {
-				appProcessStatusWritableStore.set('Processing file...');
-
-				const arrayBuffer = (e.target as FileReader).result as ArrayBuffer;
-				const srcUrl = URL.createObjectURL(new Blob([arrayBuffer]));
-				audioNode = new Audio(srcUrl);
-			};
-			reader.readAsArrayBuffer(new Blob([binaryAudio.buffer]));
-			reader.onloadend = (e) => {
-				ws = WaveSurfer.create({
-					container: '#waveform',
-					waveColor: cUnplayedSection,
-					progressColor: cPlayedSection,
-					plugins: [bottomTimeline, hover],
-					minPxPerSec,
-					media: audioNode
-				});
-				appProcessStatusWritableStore.set('Audio file is ready.');
-
-				resolve(reader.result);
-			};
+		// await new Promise((resolve) => {
+		// 	const reader = new FileReader();
+		// 	reader.onload = (e: ProgressEvent) => {
+		// 		appProcessStatusWritableStore.set('Processing file...');
+		//
+		// 		const arrayBuffer = (e.target as FileReader).result as ArrayBuffer;
+		// 		const srcUrl = URL.createObjectURL(new Blob([arrayBuffer]));
+		// 		audioNode = new Audio(srcUrl);
+		// 	};
+		// 	reader.readAsArrayBuffer(new Blob([binaryAudio.buffer]));
+		// 	reader.onloadend = (e) => {
+		// 		ws = WaveSurfer.create({
+		// 			container: '#waveform',
+		// 			waveColor: cUnplayedSection,
+		// 			progressColor: cPlayedSection,
+		// 			plugins: [bottomTimeline, hover],
+		// 			minPxPerSec,
+		// 			media: audioNode
+		// 		});
+		// 		appProcessStatusWritableStore.set('Audio file is ready.');
+		//
+		// 		resolve(reader.result);
+		// 	};
+		// });
+		ws = WaveSurfer.create({
+			container: '#waveform',
+			waveColor: cUnplayedSection,
+			progressColor: cPlayedSection,
+			plugins: [bottomTimeline, hover]
 		});
 		setTimeout(() => appProcessStatusWritableStore.set('😉'), 2000);
 
@@ -186,7 +195,7 @@
 			console.log('Seeking', so);
 		});
 
-		//	await ws.loadBlob(new Blob([binaryAudio.buffer]));
+		await ws.loadBlob(new Blob([binaryAudio.buffer]));
 		wsRegions = ws.registerPlugin(RegionsPlugin.create());
 
 		wsRegions.on('region-created', (region) => {
@@ -195,13 +204,19 @@
 					r.remove();
 				}
 			});
-			regionBegin = region.start;
-			regionEnd = region.end;
+			regionStore.update((value) => {
+				value.start = region.start;
+				value.end = region.end;
+				return value;
+			});
 		});
 		wsRegions.on('region-updated', (region) => {
 			console.log('Updated region', region);
-			regionBegin = region.start;
-			regionEnd = region.end;
+			regionStore.update((value) => {
+				value.start = region.start;
+				value.end = region.end;
+				return value;
+			});
 		});
 
 		wsRegions.enableDragSelection({
@@ -228,10 +243,9 @@
 			activeRegion = region;
 			region.play();
 			isAudioPlaying();
-			region.setOptions({ color: randomColor() });
 		});
 	}
-	// // Update the zoom level on slider change
+
 	function updateZoom(e: WheelEvent) {
 		e.stopPropagation();
 		console.log('updateZoom', e.deltaY * -0.01);
@@ -261,7 +275,6 @@
 
 	async function cutAudio(start: number, end: number, originalFileUrl: string) {
 		if (start > end || start === end) {
-			//		debug(`cannot cut not valid interval start: ${start} end: ${end}`);
 			return;
 		}
 
@@ -279,7 +292,6 @@
 
 		appProcessStatusWritableStore.set('Cut in process ✂️📼');
 		const args = ['-i', `${url}`, '-ss', `${start}`, '-to', `${end}`, '-c', 'copy', filePathToSave];
-		//	debug(`ffmpeg args: ${args}`);
 
 		const ffmpeg = Command.sidecar('binaries/ffmpeg', args);
 		const output = await ffmpeg.execute();
@@ -287,20 +299,19 @@
 		console.log(`ffmpeg output info : ${JSON.stringify(output)}`);
 
 		if (output.code !== 0) {
-			//		error(`ffmpeg error: ${output.stderr}`);
+			appProcessStatusWritableStore.set(output.stderr);
 		}
 		lastCuttedFileStore.set(filePathToSave);
 		appProcessStatusWritableStore.set('Cut saved ✅');
-		//	info(`was written to path ${outputUrl}`);
 	}
 	function focusOnRegion() {
-		if (ws.getCurrentTime() === regionBegin) return;
-		ws.setTime(regionBegin);
+		if (ws.getCurrentTime() === get(regionStore).start) return;
+
+		ws.setTime(get(regionStore).start as number);
 	}
 	async function removeRegion() {
 		wsRegions.clearRegions();
-		regionBegin = null;
-		regionEnd = null;
+		regionStore.set(regionStoreInitValue);
 	}
 
 	async function loadAudio() {
@@ -315,7 +326,7 @@
 		})) as string | null;
 		audioLoaded = false;
 		if (url === null) {
-			//user canceled
+			//user canceled selection
 			url = oldUrl;
 			if (oldUrl == null) {
 				audioLoaded = null;
@@ -325,14 +336,13 @@
 			return;
 		}
 		filename = url.split('/').pop() as string;
-		$: lastCuttedFileStore.set('');
-
-		$: appProcessStatusWritableStore.set('Loading...');
+		lastCuttedFileStore.set('');
+		appProcessStatusWritableStore.set('Loading...');
 
 		await createWaveSurfer(url as string);
 		audioLoaded = true;
 	}
-	// TODO: channels
+
 	const unsubscribe = appProcessStatusReadableStore.subscribe((value) => {
 		console.log('storeupdate', value);
 	}); // logs '0'
@@ -381,7 +391,7 @@
 				<button
 					class="rounded-corners controls-button"
 					title="Cut"
-					on:click={() => cutAudio(regionBegin, regionEnd, url)}
+					on:click={() => cutAudio(get(regionStore).start, get(regionStore).end, url)}
 					><div class="svg-white-mono">
 						<CutIcon width={50} height={44} />
 					</div>

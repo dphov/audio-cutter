@@ -10,3 +10,11 @@ export const rootStore = writable({
 });
 
 export const lastCuttedFileStore = writable('');
+
+export const audioProcessingStore = writable('');
+
+export const regionStoreInitValue: { start: number | null; end: number | null } = {
+    start: null,
+    end: null
+};
+export const regionStore = writable(regionStoreInitValue);
