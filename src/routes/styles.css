@@ -41,8 +41,8 @@ input[type='button'] {
 .controls-button {
 	padding: 0.1rem;
 	margin: 0 0.2rem;
-	min-width: 6vw;
-	min-height: 4vh;
+	min-width: 2rem;
+	min-height: 1rem;
 	background-color: var(--media-button-background);
 	transition: transform 0.1s cubic-bezier(0.36, 0.57, 0.34, 0.75), background-color 0.2s ease-out;
 }
@@ -51,8 +51,8 @@ input[type='button'] {
 	padding: 0.2rem;
 	font-size: 14px;
 	border-radius: 4px;
-	min-width: 3vw;
-	min-height: 2vh;
+	min-width: 3rem;
+	min-height: 2rem;
 	background-color: var(--media-button-background);
 	transition: transform 0.1s cubic-bezier(0.36, 0.57, 0.34, 0.75), background-color 0.2s ease-out;
 }
@@ -66,9 +66,11 @@ input[type='button'] {
 .regular-button:hover {
 	background-color: var(--media-button-background-hover);
 }
+
 .flex {
 	display: flex;
 }
+
 .flex-column {
 	flex-direction: column;
 }
@@ -93,8 +95,9 @@ input[type='button'] {
 }
 
 .self-left {
-	align-self: flex-start; /* Align this item to the left */
+	align-self: flex-start;
 }
+
 .hidden {
 	visibility: hidden;
 }

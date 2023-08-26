@@ -1,4 +1,4 @@
-import { readonly, writable } from 'svelte/store';
+import { readable, readonly, writable } from 'svelte/store';
 import type { WaveSurferOptions } from 'wavesurfer.js';
 
 const themeStoreInitValue = localStorage.getItem('themeStore') || 'light';
@@ -25,5 +25,5 @@ export const volumeStore = writable(volumeStoreInitValue);
 
 export const playerStoreInitValue = { play: false };
 export const playerStore = writable(playerStoreInitValue);
-//export const waveSurferOptionsInitValue: WaveSurferOptions = new waveSurferOptions();
-//export const waveSurferOptions = writable();
+
+export const audioExtensions: string[] = ['flac', 'wav', 'mp3', 'aac'];
