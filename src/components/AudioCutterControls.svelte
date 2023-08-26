@@ -110,14 +110,14 @@
 		<div id="media-buttons-container" class="flex justify-center">
 			{#if $playerStore.play}
 				<button on:click={() => playPauseUI()} title="Pause" class="rounded-corners controls-button"
-					><div class="svg-white-mono">
-						<PauseIcon />
+					><div class="svg-white-mono flex items-center justify-center">
+						<PauseIcon width="20px" height="20px" viewBox="0 0 28 44" />
 					</div>
 				</button>
 			{:else}
 				<button on:click={() => playPauseUI()} title="Play" class="rounded-corners controls-button"
-					><div class="svg-white-mono">
-						<PlayIcon />
+					><div class="svg-white-mono flex items-center justify-center">
+						<PlayIcon width="20px" height="20px" viewBox="0 0 44 44" />
 					</div>
 				</button>
 			{/if}
@@ -125,8 +125,8 @@
 				class="rounded-corners controls-button"
 				title="Cut"
 				on:click={() => cutAudio(get(regionStore).start, get(regionStore).end, url)}
-				><div class="svg-white-mono">
-					<CutIcon />
+				><div class="svg-white-mono flex items-center justify-center">
+					<CutIcon width="24px" height="24px" viewBox="0 0 48 44" />
 				</div>
 			</button>
 		</div>
