@@ -20,7 +20,7 @@
 	export let wsRegions: RegionsPlugin;
 	export let url: string;
 
-	let loop = true;
+	export let loop;
 	let minPxPerSecBindValue = 100;
 	let volumeBindValue = 1;
 

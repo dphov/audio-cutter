@@ -267,7 +267,7 @@
 			</div>
 		</div>
 		{#if audioSelectedFromFilesystem}
-			<AudioCutterControls {ws} {wsRegions} {url} />
+			<AudioCutterControls {ws} {wsRegions} {url} bind:loop />
 		{/if}
 		{#if $appProcessStatusReadableStore !== 'Reading file...'}
 			<div class="flex items-center justify-center">
