@@ -12,13 +12,16 @@
 		lastCuttedFileStore,
 		regionStore,
 		playerStore,
-		audioExtensions
+		audioExtensions,
+		currentTimeStore,
+		durationStore
 	} from './stores';
 	import { onDestroy } from 'svelte';
 	import Footer from '../components/Footer.svelte';
 	import AudioCutterControls from '../components/AudioCutterControls.svelte';
 
 	let loop = true;
+	let minPxPerSecBindValue = 100;
 	let ws: WaveSurfer;
 	let wsRegions: RegionsPlugin;
 
@@ -40,6 +43,16 @@
 	let cHoverOnWaveBar = getComputedStyle('--hover-on-wave-bar');
 	let cSelectedRegion = getComputedStyle('--selected-region');
 	let filename: string;
+	let currentTimeElement;
+	let durationElement;
+
+	function formatTime(seconds: number) {
+		if (seconds === undefined) return '0:00';
+		let minutes = Math.floor(seconds / 60);
+		let secs = Math.floor(seconds % 60);
+
+		return `${minutes}:${secs > 10 ? secs : `0${secs}`}`;
+	}
 
 	async function createWaveSurfer(url: string) {
 		/* read data into a Uint8Array */
@@ -82,43 +95,15 @@
 			waveColor: cUnplayedSection,
 			progressColor: cPlayedSection,
 			plugins: [bottomTimeline, hover],
-			minPxPerSec: 100
+			minPxPerSec: minPxPerSecBindValue
 		});
 		ws.getMediaElement().preload = 'auto';
 
+		ws.getMediaElement().onloadedmetadata = () => {
+			durationStore.set(ws.getMediaElement().duration);
+		};
 		setTimeout(() => appProcessStatusWritableStore.set('😉'), 2000);
 		await ws.loadBlob(new Blob([binaryAudio.buffer]));
-
-		ws.on('load', (url) => {
-			console.log('Load', url);
-		});
-		ws.on('loading', (percent) => {
-			console.log('Loading', percent + '%');
-		});
-		/** When audio starts loading */
-		ws.on('load', (url) => {
-			console.log('Load', url);
-		});
-
-		/** During audio loading */
-		ws.on('loading', (percent) => {
-			console.log('Loading', percent + '%');
-		});
-
-		/** When the audio has been decoded */
-		ws.on('decode', (duration) => {
-			console.log('Decode', duration + 's');
-		});
-
-		/** When the audio is both decoded and can play */
-		ws.on('ready', (duration) => {
-			console.log('Ready', duration + 's');
-		});
-
-		/** When a waveform is drawn */
-		ws.on('redraw', () => {
-			console.log('Redraw');
-		});
 
 		/** When the audio starts playing */
 		ws.on('play', () => {
@@ -139,16 +124,10 @@
 			playerStore.update((store) => ({ ...store, play: false }));
 			appProcessStatusWritableStore.set('Stopped.');
 		});
-		let timePrev;
+
 		/** On audio position change, fires continuously during playback */
 		ws.on('timeupdate', (currentTime) => {
-			console.log('Time', currentTime + 's');
-			if (currentTime === timePrev) {
-				appProcessStatusWritableStore.set('Audio is buffering for play...');
-			} else {
-				appProcessStatusWritableStore.set('Playing audio.');
-			}
-			timePrev = currentTime;
+			currentTimeStore.set(currentTime);
 		});
 
 		/** When the user interacts with the waveform (i.g. clicks or drags on it) */
@@ -161,15 +140,6 @@
 		/** When the zoom level changes */
 		ws.on('zoom', (minPxPerSecBindValue) => {
 			console.log('Zoom', minPxPerSecBindValue + 'px/s');
-		});
-
-		/** Just before the waveform is destroyed so you can clean up your events */
-		ws.on('destroy', () => {
-			console.log('Destroy');
-		});
-
-		ws.on('seeking', (so) => {
-			console.log('Seeking', so);
 		});
 
 		wsRegions = ws.registerPlugin(RegionsPlugin.create());
@@ -221,7 +191,7 @@
 		});
 	}
 
-	$: audioLoaded = null;
+	$: audioSelectedFromFilesystem = null;
 
 	async function loadAudio() {
 		if (ws !== undefined) ws.pause();
@@ -233,30 +203,43 @@
 			directory: false,
 			defaultPath: await downloadDir()
 		})) as string | null;
-		audioLoaded = false;
+		audioSelectedFromFilesystem = false;
 		if (url === null) {
 			//user canceled selection
 			url = oldUrl;
 			if (oldUrl == null) {
-				audioLoaded = null;
+				audioSelectedFromFilesystem = null;
 			} else {
-				audioLoaded = true;
+				audioSelectedFromFilesystem = true;
 			}
 			return;
 		}
 		filename = url.split('/').pop() as string;
 
+		durationStore.set();
+		currentTimeStore.set();
 		lastCuttedFileStore.set('');
 		appProcessStatusWritableStore.set('Loading...');
 
 		await createWaveSurfer(url as string);
-		audioLoaded = true;
+		audioSelectedFromFilesystem = true;
 	}
 
 	const unsubscribe = appProcessStatusReadableStore.subscribe((value) => {
 		console.log('storeupdate', value);
 	});
 
+	$: currentTime = '';
+	$: duration = '';
+	const currentTimeStoreUnsubscribe = currentTimeStore.subscribe((v) => {
+		currentTime = v;
+	});
+	const durationStoreUnsubscribe = durationStore.subscribe((v) => {
+		duration = v;
+	});
+
+	onDestroy(currentTimeStoreUnsubscribe);
+	onDestroy(durationStoreUnsubscribe);
 	onDestroy(unsubscribe);
 </script>
 
@@ -266,8 +249,8 @@
 </svelte:head>
 
 <section class="min-h-100vh flex-column flex justify-center">
-	<div id="waveform-container">
-		{#if audioLoaded === true}
+	<div>
+		{#if audioSelectedFromFilesystem === true}
 			<div id="filename-text" class="flex justify-center">
 				<div class="self-left">
 					{filename}
@@ -275,33 +258,51 @@
 				<br />
 			</div>
 		{/if}
-		<div class={audioLoaded ? '' : 'hidden'} id="waveform" />
-	</div>
-	{#if audioLoaded}
-		<AudioCutterControls {ws} {wsRegions} {url} />
-	{/if}
-	{#if $appProcessStatusReadableStore !== 'Reading file...'}
-		<div class="flex items-center justify-center">
-			<button class="regular-button" title="Select audio file" on:click={() => loadAudio()}>
-				{#if audioLoaded === null}
-					Load audio file
-				{:else}
-					Change audio file
-				{/if}
-			</button>
+		<div style="overflow-y:auto;">
+			<div class={audioSelectedFromFilesystem ? '' : 'hidden'} id="waveform" />
+			<div class={currentTime || duration ? 'flex' : 'hidden'} id="time-and-duration">
+				<div id="time">{formatTime(currentTime)}</div>
+
+				<div id="duration">{formatTime(duration)}</div>
+			</div>
 		</div>
-	{/if}
-	<Footer />
+		{#if audioSelectedFromFilesystem}
+			<AudioCutterControls {ws} {wsRegions} {url} />
+		{/if}
+		{#if $appProcessStatusReadableStore !== 'Reading file...'}
+			<div class="flex items-center justify-center">
+				<button class="regular-button" title="Select audio file" on:click={() => loadAudio()}>
+					{#if audioSelectedFromFilesystem === null}
+						Load audio file
+					{:else}
+						Change audio file
+					{/if}
+				</button>
+			</div>
+		{/if}
+		<Footer />
+	</div>
 </section>
 
 <style>
-	#waveform-container {
+	#time-and-duration {
+		justify-content: space-between;
+		margin-left: 1rem;
+		margin-right: 1rem;
+	}
+	#time,
+	#duration {
+		font-size: 11px;
+		background: rgba(0, 0, 0, 0.75);
+		padding: 2px;
+		color: #ddd;
 	}
 	#filename-text {
 		font-size: large;
 		margin: 0.1rem 1rem;
 	}
 	#waveform {
+		overflow: scroll;
 		margin-top: 0.5rem;
 		margin-left: 1rem;
 		margin-right: 1rem;

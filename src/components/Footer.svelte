@@ -10,8 +10,11 @@
 <footer class=" flex-column flex items-center justify-center">
 	<div id="bottom-info">
 		{#if $lastCuttedFileStore.length > 0}
-			<a class="bottom-info-item" on:click={() => writeText($lastCuttedFileStore)}>
-				(Click to copy in clipboard)<br /></a
+			<button
+				class="regular-button bottom-info-item"
+				on:click={() => writeText($lastCuttedFileStore)}
+			>
+				Copy path<br /></button
 			>
 
 			<a class="bottom-info-item">Cut saved here: {$lastCuttedFileStore}</a>

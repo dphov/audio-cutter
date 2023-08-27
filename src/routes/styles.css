@@ -40,8 +40,8 @@ input[type='button'] {
 .controls-button {
 	padding: 2px;
 	margin: 0 2px;
-	min-width: 34px;
-	min-height: 34px;
+	min-width: 44px;
+	min-height: 44px;
 	background-color: var(--media-button-background);
 	transition: transform 0.1s cubic-bezier(0.36, 0.57, 0.34, 0.75), background-color 0.2s ease-out;
 }

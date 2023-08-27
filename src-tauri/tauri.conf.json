@@ -1,114 +1,117 @@
 {
-	"build": {
-		"beforeBuildCommand": "npm run build",
-		"beforeDevCommand": "npm run dev",
-		"devPath": "http://localhost:5173",
-		"distDir": "../build",
-		"withGlobalTauri": true
-	},
-	"package": {
-		"productName": "audio-cutter",
-		"version": "0.1.0"
-	},
-	"tauri": {
-		"allowlist": {
-			"fs": {
-				"all": true
-			},
-			"path": {
-				"all": true
-			},
-			"dialog": {
-				"all": true,
-				"ask": true,
-				"confirm": true,
-				"message": true,
-				"open": true,
-				"save": true
-			},
-			"process": {
-				"exit": true
-			},
-			"shell": {
-				"sidecar": true,
-				"scope": [
-					{
-						"name": "binaries/ffmpeg",
-						"cmd": "ffmpeg",
-						"args": true,
-						"sidecar": true
-					}
-				]
-			},
-			"clipboard": {
-				"writeText": true
-			},
-			"window": {
-				"all": false,
-				"close": true,
-				"hide": true,
-				"show": true,
-				"maximize": true,
-				"minimize": true,
-				"unmaximize": true,
-				"unminimize": true,
-				"startDragging": true
-			}
-		},
-		"bundle": {
-			"active": true,
-			"appimage": {
-				"bundleMediaFramework": true
-			},
-			"category": "DeveloperTool",
-			"copyright": "",
-			"deb": {
-				"depends": []
-			},
-			"externalBin": ["binaries/ffmpeg"],
-			"icon": [
-				"icons/32x32.png",
-				"icons/128x128.png",
-				"icons/128x128@2x.png",
-				"icons/icon.icns",
-				"icons/icon.ico"
-			],
-			"identifier": "com.dphov.audiocutter",
-			"longDescription": "",
-			"macOS": {
-				"entitlements": null,
-				"exceptionDomain": "",
-				"frameworks": [],
-				"providerShortName": null,
-				"signingIdentity": null
-			},
-			"resources": [],
-			"shortDescription": "",
-			"targets": "all",
-			"windows": {
-				"webviewInstallMode": {
-					"type": "offlineInstaller"
-				},
-				"certificateThumbprint": null,
-				"digestAlgorithm": "sha256",
-				"timestampUrl": ""
-			}
-		},
-		"security": {
-			"csp": null
-		},
-		"updater": {
-			"active": false
-		},
-		"windows": [
-			{
-				"decorations": false,
-				"fullscreen": false,
-				"height": 600,
-				"resizable": true,
-				"title": "Audio Cutter",
-				"width": 800
-			}
-		]
-	}
+    "build": {
+        "beforeBuildCommand": "npm run build",
+        "beforeDevCommand": "npm run dev",
+        "devPath": "http://localhost:5173",
+        "distDir": "../build",
+        "withGlobalTauri": true
+    },
+    "package": {
+        "productName": "audio-cutter",
+        "version": "0.1.0"
+    },
+    "tauri": {
+        "allowlist": {
+            "fs": {
+                "all": true
+            },
+            "path": {
+                "all": true
+            },
+            "dialog": {
+                "all": true,
+                "ask": true,
+                "confirm": true,
+                "message": true,
+                "open": true,
+                "save": true
+            },
+            "process": {
+                "exit": true
+            },
+            "shell": {
+                "sidecar": true,
+                "scope": [
+                    {
+                        "name": "binaries/ffmpeg",
+                        "cmd": "ffmpeg",
+                        "args": true,
+                        "sidecar": true
+                    }
+                ]
+            },
+            "clipboard": {
+                "writeText": true
+            },
+            "window": {
+                "all": false,
+                "close": true,
+                "hide": true,
+                "show": true,
+                "maximize": true,
+                "minimize": true,
+                "unmaximize": true,
+                "unminimize": true,
+                "startDragging": true
+            }
+        },
+        "bundle": {
+            "active": true,
+            "appimage": {
+                "bundleMediaFramework": true
+            },
+            "category": "Music",
+            "copyright": "Dmitry Petukhov, Copyright 2023",
+            "deb": {
+                "depends": []
+            },
+            "externalBin": [
+                "binaries/ffmpeg"
+            ],
+            "icon": [
+                "icons/32x32.png",
+                "icons/128x128.png",
+                "icons/128x128@2x.png",
+                "icons/icon.icns",
+                "icons/icon.ico"
+            ],
+            "identifier": "com.dphov.audiocutter",
+            "longDescription": "",
+            "macOS": {
+                "entitlements": null,
+                "exceptionDomain": "",
+                "frameworks": [],
+                "providerShortName": null,
+                "signingIdentity": null,
+                "minimumSystemVersion": "11.0"
+            },
+            "resources": [],
+            "shortDescription": "",
+            "targets": "all",
+            "windows": {
+                "webviewInstallMode": {
+                    "type": "embedBootstrapper"
+                },
+                "certificateThumbprint": null,
+                "digestAlgorithm": "sha256",
+                "timestampUrl": ""
+            }
+        },
+        "security": {
+            "csp": null
+        },
+        "updater": {
+            "active": false
+        },
+        "windows": [
+            {
+                "decorations": false,
+                "fullscreen": false,
+                "height": 600,
+                "resizable": true,
+                "title": "Audio Cutter",
+                "width": 800
+            }
+        ]
+    }
 }
