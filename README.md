@@ -1,4 +1,4 @@
-# Music Cutter
+# Audio Cutter
 
 ## Linux (Debian)
 
