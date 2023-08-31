@@ -35,7 +35,11 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
       - name: install frontend dependencies
         run: pnpm install
-      - name: ffmpeg release unpack from remote server
+      - name: ffmpeg release unpack from remote server (for windows)
+        if: matrix.platform == 'windows-latest'
+        run: curl "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip" -OutFile "./src-tauri/binaries/ffmpeg.zip"
+      - name: ffmpeg release unpack from remote server (for macos and linux)
+        if: matrix.platform != 'windows-latest'
         run: wget -O ./src-tauri/binaries/ffmpeg.zip "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
       - name: unzip ffmpeg
         run: unzip ./src-tauri/binaries/ffmpeg.zip -d ./src-tauri/binaries/
