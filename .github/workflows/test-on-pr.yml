@@ -37,8 +37,6 @@ jobs:
         run: pnpm install
       - name: ffmpeg release unpack from remote server
         run: curl https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip -o ./src-tauri/binaries/ffmpeg.zip 
-      - name: unzip ffmpeg contents into target directory
-        run: unzip -j ./src-tauri/binaries/ffmpeg.zip
       - name: list files src-tauri/binaries
         run: ls -la ./src-tauri/binaries
       - name: delete ffmpeg.zip 
