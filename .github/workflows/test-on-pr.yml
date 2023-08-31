@@ -36,7 +36,7 @@ jobs:
       - name: install frontend dependencies
         run: pnpm install
       - name: ffmpeg release unpack from remote server
-        run: wget -P ./src-tauri/binaries/ "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
+        run: wget -O ./src-tauri/binaries/ffmpeg.zip "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
       - name: unzip ffmpeg
         run: unzip ./src-tauri/binaries/ffmpeg.zip -d .
       - name: list files src-tauri/binaries
