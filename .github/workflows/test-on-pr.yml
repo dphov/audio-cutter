@@ -40,7 +40,7 @@ jobs:
       - name: unzip ffmpeg
         run: unzip ./src-tauri/binaries/ffmpeg.zip -d ./src-tauri/binaries/
       - name: list files src-tauri/binaries
-        run: ls -la ./src-tauri/binaries
+        run: ls -la ./src-tauri/binaries/ffmpeg
       - name: delete ffmpeg.zip 
         run: rm ./src-tauri/binaries/ffmpeg.zip
       - uses: tauri-apps/tauri-action@v0
