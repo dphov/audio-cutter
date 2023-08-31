@@ -59,7 +59,7 @@ jobs:
         with:
           input: ffmpeg
           regex: '^old-file'
-          replace: ${{ubuntu.windows-latest-ffmpeg-name}}
+          replace: ${{env.windows-latest-ffmpeg-name}}
       - name: rename ffmpeg binary (windows only)
         if: matrix.platform == 'windows-latest'
         uses: actions/regex@v1
