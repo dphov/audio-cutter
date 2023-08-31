@@ -39,8 +39,15 @@ jobs:
         run: wget -O ./src-tauri/binaries/ffmpeg.zip "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
       - name: unzip ffmpeg
         run: unzip ./src-tauri/binaries/ffmpeg.zip -d ./src-tauri/binaries/
-      - name: rename ffmpeg
-        run: mv ./src-tauri/binaries/ffmpeg ./src-tauri/binaries/${{env.${{matrix.platform}}-ffmpeg-name }}
+      - name: rename ffmpeg (for linux)
+        if: matrix.platform == 'ubuntu-latest'
+        run: mv ./src-tauri/binaries/ffmpeg ./src-tauri/binaries/${{env.ubuntu-latest-ffmpeg-name}}
+      - name: rename ffmpeg (for macos)
+        if: matrix.platform == 'macos-latest'
+        run: mv ./src-tauri/binaries/ffmpeg ./src-tauri/binaries/${{env.macos-latest-ffmpeg-name}}
+      - name: rename ffmpeg (for windows)
+        if: matrix.platform == 'windows-latest'
+        run: mv ./src-tauri/binaries/ffmpeg ./src-tauri/binaries/${{env.windows-latest-ffmpeg-name}}
       - name: delete ffmpeg.zip 
         run: rm ./src-tauri/binaries/ffmpeg.zip
       - uses: tauri-apps/tauri-action@v0
