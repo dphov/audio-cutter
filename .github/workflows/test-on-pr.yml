@@ -37,36 +37,12 @@ jobs:
         run: pnpm install
       - name: ffmpeg release unpack from remote server
         run: curl https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip -o ./src-tauri/binaries/ffmpeg.zip 
-        shell: bash
       - name: unzip ffmpeg contents into target directory
         run: unzip -j ./src-tauri/binaries/ffmpeg.zip
-        shell: bash
       - name: list files src-tauri/binaries
         run: ls -la ./src-tauri/binaries
       - name: delete ffmpeg.zip 
         run: rm ./src-tauri/binaries/ffmpeg.zip
-        shell: bash
-      # - name: rename ffmpeg binary (ubuntu only)
-      #   if: matrix.platform == 'ubuntu-latest'
-      #   uses: actions/regex@v1
-      #   with:
-      #     input: ffmpeg
-      #     regex: '^old-file'
-      #     replace: ${{env.windows-latest-ffmpeg-name}}
-      # - name: rename ffmpeg binary (windows only)
-      #   if: matrix.platform == 'windows-latest'
-      #   uses: actions/regex@v1
-      #   with:
-      #     input: ffmpeg.exe
-      #     regex: '^old-file'
-      #     replace: ${{env.windows-latest-ffmpeg-name}}
-      # - name: rename ffmpeg binary (macos only)
-      #   if: matrix.platform == 'macos-latest'
-      #   uses: actions/regex@v1
-      #   with:
-      #     input: ffmpeg
-      #     regex: '^ffmpeg'
-      #     replace: ${{env.macos-latest-ffmpeg-name}}
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
