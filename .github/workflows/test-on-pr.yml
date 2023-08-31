@@ -7,7 +7,7 @@ on:
 
 env:
   macos-latest-ffmpeg-name:   "ffmpeg-x86_64-apple-darwin"
-  ubuntu-latest-ffmpeg-name:   "ffmpeg-x86_64-unknown-linux-gnu"
+  ubuntu-latest-ffmpeg-name:  "ffmpeg-x86_64-unknown-linux-gnu"
   windows-latest-ffmpeg-name: "ffmpeg-x86_64-pc-windows-msvc.exe"
 
 jobs:
@@ -36,44 +36,35 @@ jobs:
       - name: install frontend dependencies
         run: pnpm install
       - name: ffmpeg release unpack from remote server
-        uses: actions/download-file@v2
-        with:
-          url: https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip
-          target: ./src-tauri/binaries/
-          name: ffmpeg.zip
       - name: unzip ffmpeg contents into target directory
-        uses: actions/unzip@v1
-        with:
-         archive: ./src-tauri/binaries/ffmpeg.zip
-         target: ./src-tauri/binaries/
-         unzip-args: '-j'
+        run: unzip -j ./src-tauri/binaries/ffmpeg.zip
+        shell: bash
       - name: list files src-tauri/binaries
         run: ls -la ./src-tauri/binaries
       - name: delete ffmpeg.zip 
-        uses: actions/cleanup@v1
-        with:
-          files: ./src-tauri/binaries/ffmpeg.zip
-      - name: rename ffmpeg binary (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
-        uses: actions/regex@v1
-        with:
-          input: ffmpeg
-          regex: '^old-file'
-          replace: ${{env.windows-latest-ffmpeg-name}}
-      - name: rename ffmpeg binary (windows only)
-        if: matrix.platform == 'windows-latest'
-        uses: actions/regex@v1
-        with:
-          input: ffmpeg.exe
-          regex: '^old-file'
-          replace: ${{env.windows-latest-ffmpeg-name}}
-      - name: rename ffmpeg binary (macos only)
-        if: matrix.platform == 'macos-latest'
-        uses: actions/regex@v1
-        with:
-          input: ffmpeg
-          regex: '^ffmpeg'
-          replace: ${{env.macos-latest-ffmpeg-name}}
+        run: rm ./src-tauri/binaries/ffmpeg.zip
+        shell: bash
+      # - name: rename ffmpeg binary (ubuntu only)
+      #   if: matrix.platform == 'ubuntu-latest'
+      #   uses: actions/regex@v1
+      #   with:
+      #     input: ffmpeg
+      #     regex: '^old-file'
+      #     replace: ${{env.windows-latest-ffmpeg-name}}
+      # - name: rename ffmpeg binary (windows only)
+      #   if: matrix.platform == 'windows-latest'
+      #   uses: actions/regex@v1
+      #   with:
+      #     input: ffmpeg.exe
+      #     regex: '^old-file'
+      #     replace: ${{env.windows-latest-ffmpeg-name}}
+      # - name: rename ffmpeg binary (macos only)
+      #   if: matrix.platform == 'macos-latest'
+      #   uses: actions/regex@v1
+      #   with:
+      #     input: ffmpeg
+      #     regex: '^ffmpeg'
+      #     replace: ${{env.macos-latest-ffmpeg-name}}
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
