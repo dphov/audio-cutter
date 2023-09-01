@@ -107,6 +107,8 @@ jobs:
       - name: cleanup (for windows)
         if: matrix.platform == 'windows-latest'
         run: | 
-              rm -r -fo './src-tauri/binaries/ffmpeg.zip' './src-tauri/binaries/ffmpeg-6.0-essentials-build'      - uses: tauri-apps/tauri-action@v0
+              rm -r -fo './src-tauri/binaries/ffmpeg.zip'
+              rm -r -fo './src-tauri/binaries/ffmpeg-6.0-essentials-build'     
+      - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
