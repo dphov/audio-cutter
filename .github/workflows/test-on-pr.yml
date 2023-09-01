@@ -108,7 +108,7 @@ jobs:
         if: matrix.platform == 'windows-latest'
         run: | 
               rm -r -fo './src-tauri/binaries/ffmpeg.zip'
-              rm -r -fo './src-tauri/binaries/ffmpeg-6.0-essentials-build'     
+              rm -r -fo './src-tauri/binaries/ffmpeg-6.0-essentials_build'     
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
