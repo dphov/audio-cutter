@@ -20,14 +20,18 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v3
+      
       - name: setup node
         uses: actions/setup-node@v3
         with:
           node-version: 16
+      
       - name: Setup pnpm
         uses: pnpm/action-setup@v2.4.0
+      
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-latest'
         run: |
@@ -38,47 +42,75 @@ jobs:
                 libappindicator3-dev \
                 librsvg2-dev \
                 patchelf
+                
       - name: install frontend dependencies
         run: pnpm install
+
+      - name: ffmpeg release unpack from remote server (for ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+              wget -O ./src-tauri/binaries/ffmpeg.tar.xz \
+              "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+      
+      - name: ffmpeg release unpack from remote server (for macos)
+        if: matrix.platform == 'macos-latest'
+        run: |
+              wget -O ./src-tauri/binaries/ffmpeg.zip \
+              "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
+              
       - name: ffmpeg release unpack from remote server (for windows)
         if: matrix.platform == 'windows-latest'
         run: | 
               $url = "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-essentials_build.zip"
               $outputPath = "./src-tauri/binaries/ffmpeg.zip"
               Invoke-WebRequest -Uri $url -OutFile $outputPath
-      - name: ffmpeg release unpack from remote server (for linu)
+
+      - name: tar xz unpack ffmpeg (for ubuntu)
         if: matrix.platform == 'ubuntu-latest'
         run: |
-              wget -O ./src-tauri/binaries/ffmpeg.tar.xz \
-              "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
-      - name: ffmpeg release unpack from remote server (for macos)
-        if: matrix.platform == 'macos-latest'
-        run: |
-              wget -O ./src-tauri/binaries/ffmpeg.zip \
-              "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
+              tar -xf ./src-tauri/binaries/ffmpeg.tar.xz \
+              --directory ./src-tauri/binaries/  
+              
       - name: unzip ffmpeg (for windows and macos)
         if: matrix.platform != 'ubuntu-latest'
-        run: unzip ./src-tauri/binaries/ffmpeg.zip -d ./src-tauri/binaries/
-      - name: tar xz unpack ffmpeg (for linux)
-        if: matrix.platform == 'ubuntu-latest'
-        run: tar -xf ./src-tauri/binaries/ffmpeg.tar.xz --directory ./src-tauri/binaries/
-      - name: rename ffmpeg (for linux)
+        run: |
+              unzip ./src-tauri/binaries/ffmpeg.zip \
+              -d ./src-tauri/binaries/
+      - name: rename ffmpeg (for ubuntu)
         if: matrix.platform == 'ubuntu-latest'
         run: |
               mv ./src-tauri/binaries/ffmpeg-6.0-amd64-static/ffmpeg \
               ./src-tauri/binaries/${{env.ubuntu-latest-ffmpeg-name}}
+      
       - name: rename ffmpeg (for macos)
         if: matrix.platform == 'macos-latest'
         run: |
-               mv ./src-tauri/binaries/ffmpeg \
-               ./src-tauri/binaries/${{env.macos-latest-ffmpeg-name}}
+              mv ./src-tauri/binaries/ffmpeg \
+              ./src-tauri/binaries/${{env.macos-latest-ffmpeg-name}}
+      
       - name: rename ffmpeg (for windows)
         if: matrix.platform == 'windows-latest'
         run: |
-               mv ./src-tauri/binaries/ffmpeg-6.0-essentials-build/bin/ffmpeg.exe \
-               ./src-tauri/binaries/${{env.windows-latest-ffmpeg-name}}
-      - name: delete ffmpeg.zip 
-        run: rm ./src-tauri/binaries/ffmpeg.zip
+              mv ./src-tauri/binaries/ffmpeg-6.0-essentials_build/bin/ffmpeg.exe \
+              ./src-tauri/binaries/${{env.windows-latest-ffmpeg-name}}
+      
+      - name: cleanup (for ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: | 
+              rm -rf ./src-tauri/binaries/ffmpeg.tar.xz \
+              ./src-tauri/binaries/ffmpeg-6.0-amd64-static
+      
+      - name: cleanup (for macos)
+        if: matrix.platform == 'macos-latest'
+        run: | 
+              rm -rf ./src-tauri/binaries/ffmpeg.zip \
+              ./src-tauri/binaries/ffmpeg
+      
+      - name: cleanup (for windows)
+        if: matrix.platform == 'windows-latest'
+        run: | 
+              rm -rf ./src-tauri/binaries/ffmpeg.zip \
+              ./src-tauri/binaries/ffmpeg-6.0-essentials-build
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
