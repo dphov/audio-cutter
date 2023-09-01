@@ -74,8 +74,7 @@ jobs:
       - name: unzip ffmpeg (for windows and macos)
         if: matrix.platform != 'ubuntu-latest'
         run: |
-              unzip ./src-tauri/binaries/ffmpeg.zip \
-              -d ./src-tauri/binaries/
+              unzip ./src-tauri/binaries/ffmpeg.zip -d ./src-tauri/binaries/
       - name: rename ffmpeg (for ubuntu)
         if: matrix.platform == 'ubuntu-latest'
         run: |
@@ -91,9 +90,8 @@ jobs:
       - name: rename ffmpeg (for windows)
         if: matrix.platform == 'windows-latest'
         run: |
-              mv ./src-tauri/binaries/ffmpeg-6.0-essentials_build/bin/ffmpeg.exe \
-              ./src-tauri/binaries/${{env.windows-latest-ffmpeg-name}}
-      
+              mv ./src-tauri/binaries/ffmpeg-6.0-essentials_build/bin/ffmpeg.exe ./src-tauri/binaries/${{env.windows-latest-ffmpeg-name}}
+     
       - name: cleanup (for ubuntu)
         if: matrix.platform == 'ubuntu-latest'
         run: | 
@@ -109,8 +107,7 @@ jobs:
       - name: cleanup (for windows)
         if: matrix.platform == 'windows-latest'
         run: | 
-              rm -rf ./src-tauri/binaries/ffmpeg.zip \
-              ./src-tauri/binaries/ffmpeg-6.0-essentials-build
+              rm -rf ./src-tauri/binaries/ffmpeg.zip ./src-tauri/binaries/ffmpeg-6.0-essentials-build
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
