@@ -43,20 +43,29 @@ jobs:
       - name: ffmpeg release unpack from remote server (for windows)
         if: matrix.platform == 'windows-latest'
         run: | 
-              $url = "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
+              $url = "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-essentials_build.zip"
               $outputPath = "./src-tauri/binaries/ffmpeg.zip"
               Invoke-WebRequest -Uri $url -OutFile $outputPath
-      - name: ffmpeg release unpack from remote server (for macos and linux)
-        if: matrix.platform != 'windows-latest'
+      - name: ffmpeg release unpack from remote server (for linu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+              wget -O ./src-tauri/binaries/ffmpeg.tar.xz \
+              "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+      - name: ffmpeg release unpack from remote server (for macos)
+        if: matrix.platform == 'macos-latest'
         run: |
               wget -O ./src-tauri/binaries/ffmpeg.zip \
               "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
-      - name: unzip ffmpeg
+      - name: unzip ffmpeg (for windows and macos)
+        if: matrix.platform != 'ubuntu-latest'
         run: unzip ./src-tauri/binaries/ffmpeg.zip -d ./src-tauri/binaries/
+      - name: tar xz unpack ffmpeg (for linux)
+        if: matrix.platform == 'ubuntu-latest'
+        run: tar -xf ./src-tauri/binaries/ffmpeg.tar.xz --directory ./src-tauri/binaries/
       - name: rename ffmpeg (for linux)
         if: matrix.platform == 'ubuntu-latest'
         run: |
-              mv ./src-tauri/binaries/ffmpeg \
+              mv ./src-tauri/binaries/ffmpeg-6.0-amd64-static/ffmpeg \
               ./src-tauri/binaries/${{env.ubuntu-latest-ffmpeg-name}}
       - name: rename ffmpeg (for macos)
         if: matrix.platform == 'macos-latest'
@@ -66,7 +75,7 @@ jobs:
       - name: rename ffmpeg (for windows)
         if: matrix.platform == 'windows-latest'
         run: |
-               mv ./src-tauri/binaries/ffmpeg \
+               mv ./src-tauri/binaries/ffmpeg-6.0-essentials-build/bin/ffmpeg.exe \
                ./src-tauri/binaries/${{env.windows-latest-ffmpeg-name}}
       - name: delete ffmpeg.zip 
         run: rm ./src-tauri/binaries/ffmpeg.zip
