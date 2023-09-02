@@ -1,3 +1,0 @@
-89c0df05499aaf8c3c4ff9d6f334763950b63052 80380172 ffmpeg-x86_64-apple-darwin
-03498bc32d030339ecff8d0f550a76e241d2acff 118089728 ffmpeg-x86_64-pc-windows-msvc.exe
-d2bb1e4e68aea29175234c30b5c55f29a004d20c 79052544 ffmpeg-x86_64-unknown-linux-gnu
