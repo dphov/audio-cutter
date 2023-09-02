@@ -16,6 +16,7 @@
 		"@sveltejs/adapter-static": "1.0.0-next.50",
 		"@sveltejs/kit": "^1.23.0",
 		"@tauri-apps/cli": "^1.4.0",
+		"@tsconfig/strictest": "^2.0.2",
 		"@types/cookie": "^0.5.1",
 		"@typescript-eslint/eslint-plugin": "^5.62.0",
 		"@typescript-eslint/parser": "^5.62.0",
@@ -43,7 +44,7 @@
 		"file-type": "^18.5.0",
 		"normalize.css": "^8.0.1",
 		"tauri-plugin-log-api": "github:tauri-apps/tauri-plugin-log",
-		"wavesurfer.js": "^7.1.5"
+		"wavesurfer.js": "^7.2.0"
 	},
 	"packageManager": "pnpm@latest"
 }

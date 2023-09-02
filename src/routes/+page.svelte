@@ -1,50 +1,23 @@
 <script lang="ts">
-	import { open } from '@tauri-apps/api/dialog';
-	import { downloadDir } from '@tauri-apps/api/path';
-	import { readBinaryFile } from '@tauri-apps/api/fs';
-	import WaveSurfer from 'wavesurfer.js';
-	import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.js';
-	import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline';
-	import Hover from 'wavesurfer.js/dist/plugins/hover';
+	import type WaveSurfer from 'wavesurfer.js';
+	import type RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
 	import {
 		appProcessStatusReadableStore,
-		appProcessStatusWritableStore,
-		lastCuttedFileStore,
-		regionStore,
-		playerStore,
-		audioExtensions,
 		currentTimeStore,
-		durationStore
+		durationStore,
+		currentFileUrlStore,
+		isAudioSelectedStore
 	} from './stores';
 	import { onDestroy } from 'svelte';
 	import Footer from '../components/Footer.svelte';
 	import AudioCutterControls from '../components/AudioCutterControls.svelte';
 
-	let loop = true;
-	let minPxPerSecBindValue = 100;
+	import { loadAudio } from './loadAudio';
+	import { get } from 'svelte/store';
+	import { createWaveSurfer } from './createWaveSurfer';
 	let ws: WaveSurfer;
 	let wsRegions: RegionsPlugin;
-
-	let url: string | null;
-	let binaryAudio;
-
-	function getComputedStyle(varName: string): string {
-		return (window.getComputedStyle(document.documentElement as any) as any).getPropertyValue(
-			varName
-		);
-	}
-	let text = getComputedStyle('--text');
-	let background = getComputedStyle('--background');
-	let primary = getComputedStyle('--primary');
-	let secondary = getComputedStyle('--secondary');
-	let accent = getComputedStyle('--accent');
-	let cPlayedSection = getComputedStyle('--played-section');
-	let cUnplayedSection = getComputedStyle('--unplayed-section');
-	let cHoverOnWaveBar = getComputedStyle('--hover-on-wave-bar');
-	let cSelectedRegion = getComputedStyle('--selected-region');
-	let filename: string;
-	let currentTimeElement;
-	let durationElement;
+	let waveformDiv: HTMLElement;
 
 	function formatTime(seconds: number) {
 		if (seconds === undefined) return '0:00';
@@ -54,183 +27,13 @@
 		return `${minutes}:${secs > 10 ? secs : `0${secs}`}`;
 	}
 
-	async function createWaveSurfer(url: string) {
-		/* read data into a Uint8Array */
-		console.log('Begin blob reading');
-		appProcessStatusWritableStore.set('Reading file...');
-
-		binaryAudio = await readBinaryFile(url);
-		appProcessStatusWritableStore.set('Reading is done.');
-
-		console.log('Blob reading is done');
-
-		if (ws !== undefined) {
-			ws.destroy();
-			regionStore.update((value) => {
-				value.start = 0;
-				value.end = 0;
-				return value;
-			});
-		}
-
-		const bottomTimeline = TimelinePlugin.create({
-			height: 28,
-			timeInterval: 1,
-			primaryLabelInterval: 1,
-			style: {
-				fontSize: '12px',
-				color: text
-			}
-		});
-		const hover = Hover.create({
-			lineColor: cHoverOnWaveBar,
-			lineWidth: 2,
-			labelBackground: background,
-			labelColor: text,
-			labelSize: '11px'
-		});
-
-		ws = WaveSurfer.create({
-			container: '#waveform',
-			waveColor: cUnplayedSection,
-			progressColor: cPlayedSection,
-			plugins: [bottomTimeline, hover],
-			minPxPerSec: minPxPerSecBindValue
-		});
-		ws.getMediaElement().preload = 'auto';
-
-		ws.getMediaElement().onloadedmetadata = () => {
-			durationStore.set(ws.getMediaElement().duration);
-		};
-		setTimeout(() => appProcessStatusWritableStore.set('😉'), 2000);
-		await ws.loadBlob(new Blob([binaryAudio.buffer]));
-
-		/** When the audio starts playing */
-		ws.on('play', () => {
-			appProcessStatusWritableStore.set('Playing.');
-			playerStore.update((store) => ({ ...store, play: true }));
-			console.log('Play');
-		});
-
-		/** When the audio pauses */
-		ws.on('pause', () => {
-			appProcessStatusWritableStore.set('Paused.');
-			playerStore.update((store) => ({ ...store, play: false }));
-			console.log('Pause');
-		});
-
-		ws.on('finish', () => {
-			console.log('Finish');
-			playerStore.update((store) => ({ ...store, play: false }));
-			appProcessStatusWritableStore.set('Stopped.');
-		});
-
-		/** On audio position change, fires continuously during playback */
-		ws.on('timeupdate', (currentTime) => {
-			currentTimeStore.set(currentTime);
-		});
-
-		/** When the user interacts with the waveform (i.g. clicks or drags on it) */
-		ws.on('interaction', (newTime) => {
-			activeRegion = null;
-
-			console.log('Interaction', newTime + 's');
-		});
-
-		/** When the zoom level changes */
-		ws.on('zoom', (minPxPerSecBindValue) => {
-			console.log('Zoom', minPxPerSecBindValue + 'px/s');
-		});
-
-		wsRegions = ws.registerPlugin(RegionsPlugin.create());
-
-		wsRegions.on('region-created', (region) => {
-			wsRegions.getRegions().forEach((r) => {
-				if (r.id !== region.id) {
-					r.remove();
-				}
-			});
-			regionStore.update((value) => {
-				value.start = region.start;
-				value.end = region.end;
-				return value;
-			});
-		});
-		wsRegions.on('region-updated', (region) => {
-			console.log('Updated region', region);
-			regionStore.update((value) => {
-				value.start = region.start;
-				value.end = region.end;
-				return value;
-			});
-		});
-
-		wsRegions.enableDragSelection({
-			color: cSelectedRegion
-		});
-
-		let activeRegion: Region | null = null;
-		wsRegions.on('region-in', (region) => {
-			activeRegion = region;
-		});
-
-		wsRegions.on('region-out', (region) => {
-			if (activeRegion === region) {
-				if (loop) {
-					region.play();
-				} else {
-					activeRegion = null;
-				}
-			}
-		});
-
-		wsRegions.on('region-clicked', (region: Region, e: Event) => {
-			e.stopPropagation();
-			activeRegion = region;
-			region.play();
-		});
-	}
-
-	$: audioSelectedFromFilesystem = null;
-
-	async function loadAudio() {
-		if (ws !== undefined) ws.pause();
-
-		let oldUrl = url;
-		url = (await open({
-			multiple: false,
-			filters: [{ name: 'Audio', extensions: audioExtensions }],
-			directory: false,
-			defaultPath: await downloadDir()
-		})) as string | null;
-		audioSelectedFromFilesystem = false;
-		if (url === null) {
-			//user canceled selection
-			url = oldUrl;
-			if (oldUrl == null) {
-				audioSelectedFromFilesystem = null;
-			} else {
-				audioSelectedFromFilesystem = true;
-			}
-			return;
-		}
-		filename = url.split('/').pop() as string;
-
-		durationStore.set();
-		currentTimeStore.set();
-		lastCuttedFileStore.set('');
-		appProcessStatusWritableStore.set('Loading...');
-
-		await createWaveSurfer(url as string);
-		audioSelectedFromFilesystem = true;
-	}
+	$: currentTime = '';
+	$: duration = '';
 
 	const unsubscribe = appProcessStatusReadableStore.subscribe((value) => {
 		console.log('storeupdate', value);
 	});
 
-	$: currentTime = '';
-	$: duration = '';
 	const currentTimeStoreUnsubscribe = currentTimeStore.subscribe((v) => {
 		currentTime = v;
 	});
@@ -250,29 +53,43 @@
 
 <section class="min-h-100vh flex-column flex justify-center">
 	<div>
-		{#if audioSelectedFromFilesystem === true}
+		{#if $isAudioSelectedStore === true}
 			<div id="filename-text" class="flex justify-center">
 				<div class="self-left">
-					{filename}
+					{get(currentFileUrlStore).split('/').pop()}
 				</div>
 				<br />
 			</div>
 		{/if}
-		<div style="overflow-y:auto;">
-			<div class={audioSelectedFromFilesystem ? '' : 'hidden'} id="waveform" />
-			<div class={currentTime || duration ? 'flex' : 'hidden'} id="time-and-duration">
-				<div id="time">{formatTime(currentTime)}</div>
+		<div>
+			<div id="waveform" class={$isAudioSelectedStore ? '' : 'hidden'} />
 
-				<div id="duration">{formatTime(duration)}</div>
+			<div class={currentTime || duration ? 'flex' : 'hidden'} id="time-and-duration">
+				<div id="time">{formatTime(Number(currentTime))}</div>
+
+				<div id="duration">{formatTime(Number(duration))}</div>
 			</div>
 		</div>
-		{#if audioSelectedFromFilesystem}
-			<AudioCutterControls {ws} {wsRegions} {url} bind:loop />
+		{#if $isAudioSelectedStore === true}
+			<AudioCutterControls {ws} {wsRegions} />
 		{/if}
 		{#if $appProcessStatusReadableStore !== 'Reading file...'}
 			<div class="flex items-center justify-center">
-				<button class="regular-button" title="Select audio file" on:click={() => loadAudio()}>
-					{#if audioSelectedFromFilesystem === null}
+				<button
+					class="regular-button"
+					title="Select audio file"
+					on:click={async () => {
+						const shouldLoadAudio = await loadAudio(ws);
+						if (!shouldLoadAudio) {
+							return;
+						}
+						let wsAndWsRegions = await createWaveSurfer(ws, wsRegions);
+						ws = wsAndWsRegions.ws;
+						wsRegions = wsAndWsRegions.wsRegions;
+						isAudioSelectedStore.set(true);
+					}}
+				>
+					{#if $isAudioSelectedStore === null}
 						Load audio file
 					{:else}
 						Change audio file

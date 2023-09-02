@@ -6,7 +6,9 @@
 		regionStore,
 		appProcessStatusWritableStore,
 		lastCuttedFileStore,
-		regionStoreInitValue
+		regionStoreInitValue,
+		currentFileUrlStore,
+		regionLoopStore
 	} from '../routes/stores';
 	import CutIcon from '$lib/images/cut.svg';
 	import PlayIcon from '$lib/images/play.svg';
@@ -18,9 +20,7 @@
 
 	export let ws: WaveSurfer;
 	export let wsRegions: RegionsPlugin;
-	export let url: string;
 
-	export let loop;
 	let minPxPerSecBindValue = 100;
 	let volumeBindValue = 1;
 
@@ -33,6 +33,7 @@
 			ws.playPause();
 		}
 	}
+
 	async function cutAudio(start: number, end: number, originalFileUrl: string) {
 		if (start > end || start === end) {
 			return;
@@ -64,10 +65,12 @@
 		lastCuttedFileStore.set(filePathToSave);
 		appProcessStatusWritableStore.set('Cut saved ✅');
 	}
+
 	function focusOnRegion() {
 		if (ws.getCurrentTime() === get(regionStore).start) return;
 		ws.setTime(get(regionStore).start as number);
 	}
+
 	async function removeRegion() {
 		wsRegions.clearRegions();
 		regionStore.set(regionStoreInitValue);
@@ -78,12 +81,14 @@
 		const newZoom = e.target.valueAsNumber;
 		ws.zoom(newZoom);
 	};
+
 	const updateVolume = (e: Event) => {
 		e.stopPropagation();
 		const newVolume = e.target.valueAsNumber;
 		volumeStore.update((value) => ({ ...value, volume: newVolume }));
 		ws.setVolume(get(volumeStore).volume);
 	};
+
 	const muteUnmute = (e: Event) => {
 		e.stopPropagation();
 		if (ws.getMuted()) {
@@ -114,7 +119,8 @@
 			<button
 				class="rounded-corners controls-button"
 				title="Cut"
-				on:click={() => cutAudio(get(regionStore).start, get(regionStore).end, url)}
+				on:click={() =>
+					cutAudio(get(regionStore).start, get(regionStore).end, get(currentFileUrlStore))}
 				><div class="svg-white-mono flex items-center justify-center">
 					<CutIcon width="34px" height="34px" viewBox="0 0 48 44" />
 				</div>
@@ -161,7 +167,7 @@
 			><input
 				title="Loop play on region"
 				type="checkbox"
-				bind:checked={loop}
+				bind:checked={$regionLoopStore}
 				id="loop-play-on-region-id"
 			/>
 			Loop play on region</label
