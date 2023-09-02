@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { open } from '@tauri-apps/api/dialog';
-	import { downloadDir } from '@tauri-apps/api/path';
 	import { readBinaryFile } from '@tauri-apps/api/fs';
 	import WaveSurfer from 'wavesurfer.js';
 	import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.js';
@@ -9,42 +7,32 @@
 	import {
 		appProcessStatusReadableStore,
 		appProcessStatusWritableStore,
-		lastCuttedFileStore,
 		regionStore,
 		playerStore,
-		audioExtensions,
 		currentTimeStore,
-		durationStore
+		durationStore,
+		currentFileUrlStore,
+		isAudioSelectedStore
 	} from './stores';
 	import { onDestroy } from 'svelte';
 	import Footer from '../components/Footer.svelte';
 	import AudioCutterControls from '../components/AudioCutterControls.svelte';
-
+	import {
+		cHoverOnWaveBar,
+		cBackground,
+		cUnplayedSection,
+		cPlayedSection,
+		cSelectedRegion,
+		cText
+	} from './styles';
+	import { loadAudio } from './loadAudio';
+	import { get } from 'svelte/store';
 	let loop = true;
 	let minPxPerSecBindValue = 100;
 	let ws: WaveSurfer;
 	let wsRegions: RegionsPlugin;
 
-	let url: string | null;
 	let binaryAudio;
-
-	function getComputedStyle(varName: string): string {
-		return (window.getComputedStyle(document.documentElement as any) as any).getPropertyValue(
-			varName
-		);
-	}
-	let text = getComputedStyle('--text');
-	let background = getComputedStyle('--background');
-	let primary = getComputedStyle('--primary');
-	let secondary = getComputedStyle('--secondary');
-	let accent = getComputedStyle('--accent');
-	let cPlayedSection = getComputedStyle('--played-section');
-	let cUnplayedSection = getComputedStyle('--unplayed-section');
-	let cHoverOnWaveBar = getComputedStyle('--hover-on-wave-bar');
-	let cSelectedRegion = getComputedStyle('--selected-region');
-	let filename: string;
-	let currentTimeElement;
-	let durationElement;
 
 	function formatTime(seconds: number) {
 		if (seconds === undefined) return '0:00';
@@ -54,12 +42,12 @@
 		return `${minutes}:${secs > 10 ? secs : `0${secs}`}`;
 	}
 
-	async function createWaveSurfer(url: string) {
+	async function createWaveSurfer() {
 		/* read data into a Uint8Array */
 		console.log('Begin blob reading');
 		appProcessStatusWritableStore.set('Reading file...');
 
-		binaryAudio = await readBinaryFile(url);
+		binaryAudio = await readBinaryFile(get(currentFileUrlStore));
 		appProcessStatusWritableStore.set('Reading is done.');
 
 		console.log('Blob reading is done');
@@ -79,14 +67,14 @@
 			primaryLabelInterval: 1,
 			style: {
 				fontSize: '12px',
-				color: text
+				color: cText
 			}
 		});
 		const hover = Hover.create({
 			lineColor: cHoverOnWaveBar,
 			lineWidth: 2,
-			labelBackground: background,
-			labelColor: text,
+			labelBackground: cBackground,
+			labelColor: cText,
 			labelSize: '11px'
 		});
 
@@ -97,11 +85,13 @@
 			plugins: [bottomTimeline, hover],
 			minPxPerSec: minPxPerSecBindValue
 		});
+		console.log('wsinit', ws);
 		ws.getMediaElement().preload = 'auto';
 
 		ws.getMediaElement().onloadedmetadata = () => {
-			durationStore.set(ws.getMediaElement().duration);
+			durationStore.set(String(ws.getMediaElement().duration));
 		};
+
 		setTimeout(() => appProcessStatusWritableStore.set('😉'), 2000);
 		await ws.loadBlob(new Blob([binaryAudio.buffer]));
 
@@ -127,7 +117,7 @@
 
 		/** On audio position change, fires continuously during playback */
 		ws.on('timeupdate', (currentTime) => {
-			currentTimeStore.set(currentTime);
+			currentTimeStore.set(String(currentTime));
 		});
 
 		/** When the user interacts with the waveform (i.g. clicks or drags on it) */
@@ -189,48 +179,17 @@
 			activeRegion = region;
 			region.play();
 		});
+
+		isAudioSelectedStore.set(true);
 	}
 
-	$: audioSelectedFromFilesystem = null;
-
-	async function loadAudio() {
-		if (ws !== undefined) ws.pause();
-
-		let oldUrl = url;
-		url = (await open({
-			multiple: false,
-			filters: [{ name: 'Audio', extensions: audioExtensions }],
-			directory: false,
-			defaultPath: await downloadDir()
-		})) as string | null;
-		audioSelectedFromFilesystem = false;
-		if (url === null) {
-			//user canceled selection
-			url = oldUrl;
-			if (oldUrl == null) {
-				audioSelectedFromFilesystem = null;
-			} else {
-				audioSelectedFromFilesystem = true;
-			}
-			return;
-		}
-		filename = url.split('/').pop() as string;
-
-		durationStore.set();
-		currentTimeStore.set();
-		lastCuttedFileStore.set('');
-		appProcessStatusWritableStore.set('Loading...');
-
-		await createWaveSurfer(url as string);
-		audioSelectedFromFilesystem = true;
-	}
+	$: currentTime = '';
+	$: duration = '';
 
 	const unsubscribe = appProcessStatusReadableStore.subscribe((value) => {
 		console.log('storeupdate', value);
 	});
 
-	$: currentTime = '';
-	$: duration = '';
 	const currentTimeStoreUnsubscribe = currentTimeStore.subscribe((v) => {
 		currentTime = v;
 	});
@@ -250,29 +209,39 @@
 
 <section class="min-h-100vh flex-column flex justify-center">
 	<div>
-		{#if audioSelectedFromFilesystem === true}
+		{#if $isAudioSelectedStore === true}
 			<div id="filename-text" class="flex justify-center">
 				<div class="self-left">
-					{filename}
+					{get(currentFileUrlStore).split('/').pop()}
 				</div>
 				<br />
 			</div>
 		{/if}
-		<div style="overflow-y:auto;">
-			<div class={audioSelectedFromFilesystem ? '' : 'hidden'} id="waveform" />
+		<div>
+			<div class={$isAudioSelectedStore ? '' : 'hidden'} id="waveform" />
 			<div class={currentTime || duration ? 'flex' : 'hidden'} id="time-and-duration">
-				<div id="time">{formatTime(currentTime)}</div>
+				<div id="time">{formatTime(Number(currentTime))}</div>
 
-				<div id="duration">{formatTime(duration)}</div>
+				<div id="duration">{formatTime(Number(duration))}</div>
 			</div>
 		</div>
-		{#if audioSelectedFromFilesystem}
-			<AudioCutterControls {ws} {wsRegions} {url} bind:loop />
+		{#if $isAudioSelectedStore === true}
+			<AudioCutterControls {ws} {wsRegions} bind:loop />
 		{/if}
 		{#if $appProcessStatusReadableStore !== 'Reading file...'}
 			<div class="flex items-center justify-center">
-				<button class="regular-button" title="Select audio file" on:click={() => loadAudio()}>
-					{#if audioSelectedFromFilesystem === null}
+				<button
+					class="regular-button"
+					title="Select audio file"
+					on:click={async () => {
+						const shouldLoadAudio = await loadAudio(ws);
+						if (!shouldLoadAudio) {
+							return;
+						}
+						await createWaveSurfer();
+					}}
+				>
+					{#if $isAudioSelectedStore === null}
 						Load audio file
 					{:else}
 						Change audio file
