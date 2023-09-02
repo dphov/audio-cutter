@@ -53,8 +53,8 @@ export async function createWaveSurfer(ws: WaveSurfer, wsRegions: RegionsPlugin)
 
     ws = WaveSurfer.create({
         container: '#waveform',
-        waveColor: 'var(--unplayed-section)',
-        progressColor: 'var(--played-section)',
+        waveColor: '#cc84ad',
+        progressColor: '#ffa538',
         plugins: [bottomTimeline, hover],
         minPxPerSec: 100
     });
