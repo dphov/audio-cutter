@@ -31,3 +31,4 @@ export const durationStore = writable('');
 export const currentTimeStore = writable('');
 export const currentFileUrlStore = writable('');
 export const isAudioSelectedStore: Writable<boolean | null> = writable(null);
+export const regionLoopStore = writable(true);

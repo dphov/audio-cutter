@@ -7,7 +7,8 @@
 		appProcessStatusWritableStore,
 		lastCuttedFileStore,
 		regionStoreInitValue,
-		currentFileUrlStore
+		currentFileUrlStore,
+		regionLoopStore
 	} from '../routes/stores';
 	import CutIcon from '$lib/images/cut.svg';
 	import PlayIcon from '$lib/images/play.svg';
@@ -19,7 +20,6 @@
 
 	export let ws: WaveSurfer;
 	export let wsRegions: RegionsPlugin;
-	export let loop: boolean;
 
 	let minPxPerSecBindValue = 100;
 	let volumeBindValue = 1;
@@ -167,7 +167,7 @@
 			><input
 				title="Loop play on region"
 				type="checkbox"
-				bind:checked={loop}
+				bind:checked={$regionLoopStore}
 				id="loop-play-on-region-id"
 			/>
 			Loop play on region</label
