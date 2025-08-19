@@ -25,13 +25,9 @@
 	let volumeBindValue = 1;
 
 	function playPauseUI() {
-		if (!ws.isPlaying()) {
-			playerStore.update((store) => ({ ...store, play: true }));
-			ws.playPause();
-		} else {
-			playerStore.update((store) => ({ ...store, play: false }));
-			ws.playPause();
-		}
+		const isPlaying = !ws.isPlaying() ? true : false;
+		playerStore.update((store) => ({ ...store, play: isPlaying }));
+		ws.playPause();
 	}
 
 	async function cutAudio(start: number, end: number, originalFileUrl: string) {
@@ -91,11 +87,8 @@
 
 	const muteUnmute = (e: Event) => {
 		e.stopPropagation();
-		if (ws.getMuted()) {
-			volumeStore.update((value) => ({ ...value, muted: false }));
-		} else {
-			volumeStore.update((value) => ({ ...value, muted: true }));
-		}
+		const isMuted = ws.getMuted() ? false : true
+		volumeStore.update((value) => ({ ...value, muted: isMuted }));
 		ws.setMuted(get(volumeStore).muted);
 	};
 </script>
@@ -104,14 +97,14 @@
 	<div>
 		<div id="media-buttons-container" class="flex justify-center">
 			{#if $playerStore.play}
-				<button on:click={() => playPauseUI()} title="Pause" class="rounded-corners controls-button"
-					><div class="svg-white-mono flex items-center justify-center">
+				<button on:click={() => playPauseUI()} title="Pause" class="rounded-corners controls-button">
+					<div class="svg-white-mono flex items-center justify-center">
 						<PauseIcon width="34px" height="34px" viewBox="0 0 28 44" />
 					</div>
 				</button>
 			{:else}
-				<button on:click={() => playPauseUI()} title="Play" class="rounded-corners controls-button"
-					><div class="svg-white-mono flex items-center justify-center">
+				<button on:click={() => playPauseUI()} title="Play" class="rounded-corners controls-button">
+					<div class="svg-white-mono flex items-center justify-center">
 						<PlayIcon width="34px" height="34px" viewBox="0 0 44 44" />
 					</div>
 				</button>
@@ -163,15 +156,15 @@
 		<button class="regular-button" on:click={() => focusOnRegion()}>Focus on region</button>
 
 		<button class="regular-button" on:click={() => removeRegion()}>Remove region</button>
-		<label class="regular-button" for="loop-play-on-region-id"
-			><input
+		<label class="regular-button" for="loop-play-on-region-id">
+			<input
 				title="Loop play on region"
 				type="checkbox"
 				bind:checked={$regionLoopStore}
 				id="loop-play-on-region-id"
 			/>
-			Loop play on region</label
-		>
+			Loop play on region
+		</label>
 	</div>
 </div>
 
